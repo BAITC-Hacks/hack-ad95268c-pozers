@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#16704c">
+  <meta name="color-scheme" content="light">
+  <title>EKT AI Assistant — демо</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="demo-data.js" defer></script>
+  <script src="assistant-service.js" defer></script>
+  <script src="cart.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="icon-spark" viewBox="0 0 24 24"><path d="m12 3 2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4L12 3Z"/><path d="m20 2 .7 2.3L23 5l-2.3.7L20 8l-.7-2.3L17 5l2.3-.7L20 2Z"/></symbol>
+    <symbol id="icon-bag" viewBox="0 0 24 24"><path d="M5 7h14l1 14H4L5 7Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></symbol>
+    <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M12 19V5m-6 6 6-6 6 6"/></symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="icon-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="icon-file" viewBox="0 0 24 24"><path d="M14 3H5v18h14V8l-5-5Zm0 0v5h5M8 13h8m-8 4h5"/></symbol>
+    <symbol id="product-breaker" viewBox="0 0 180 120">
+      <ellipse cx="91" cy="105" rx="46" ry="6" fill="#dce5df"/>
+      <path d="M68 16h43l10 10v73H68Z" fill="#e4e9e6" stroke="#a7b6ae"/>
+      <path d="M60 24h48v78H60Z" fill="#fafbf9" stroke="#a7b6ae"/>
+      <path d="M60 24h48v15H60Z" fill="#e8ede9"/>
+      <rect x="70" y="46" width="28" height="29" rx="3" fill="#314b3d"/>
+      <rect x="74" y="44" width="20" height="14" rx="2" fill="#35835c"/>
+      <path d="M72 84h23m-23 5h14" stroke="#9bab9f" stroke-width="2"/>
+      <circle cx="84" cy="31" r="3" fill="#91a096"/><path d="M82 31h4" stroke="#eef2ee"/>
+    </symbol>
+    <symbol id="product-cable" viewBox="0 0 180 120">
+      <ellipse cx="89" cy="102" rx="51" ry="7" fill="#dce5df"/>
+      <ellipse cx="83" cy="66" rx="37" ry="31" fill="none" stroke="#344c40" stroke-width="18"/>
+      <ellipse cx="83" cy="63" rx="37" ry="31" fill="none" stroke="#567061" stroke-width="3"/>
+      <ellipse cx="83" cy="69" rx="26" ry="21" fill="none" stroke="#172f24" stroke-width="3"/>
+      <path d="M113 81q25 13 33-8" fill="none" stroke="#344c40" stroke-width="10"/>
+      <path d="m145 74 9-15m-7 16 15-5m-18 2 1-17" fill="none" stroke="#b89056" stroke-width="3"/>
+      <path d="m54 41 10 8m41 32 11 7" stroke="#e0c57f" stroke-width="7"/>
+    </symbol>
+    <symbol id="product-socket" viewBox="0 0 180 120">
+      <ellipse cx="90" cy="103" rx="46" ry="6" fill="#dce5df"/>
+      <rect x="51" y="21" width="78" height="78" rx="10" fill="#e4eae5" stroke="#b3bfb5"/>
+      <rect x="48" y="17" width="78" height="78" rx="10" fill="#fcfdfb" stroke="#b3bfb5"/>
+      <rect x="60" y="29" width="54" height="54" rx="7" fill="#edf1eb"/>
+      <circle cx="87" cy="56" r="21" fill="#e0e7df" stroke="#b6c2b5"/>
+      <circle cx="78" cy="56" r="3" fill="#536957"/><circle cx="96" cy="56" r="3" fill="#536957"/>
+      <path d="M87 36v6m0 28v6" stroke="#9da995" stroke-width="3"/>
+    </symbol>
+  </svg>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="./index.html" class="brand" aria-label="EKT — главная"><span class="brand-mark">ekt<span>·</span></span><span class="brand-divider"></span><span class="brand-caption">Электротехника.<br>Просто и понятно.</span></a>
+      <a class="cart-shortcut" href="#cart-panel"><svg class="icon" aria-hidden="true"><use href="#icon-bag"></use></svg><span>Демо-корзина</span><span class="count-badge" id="header-cart-count">0</span></a>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <div class="intro-row">
+      <div><div class="eyebrow"><span class="status-dot"></span> ПОМОЩНИК ПО ПОДБОРУ ТОВАРОВ</div><h1>EKT <span>AI Assistant</span></h1><p class="intro-description">От вопроса к нужному товару — в одном диалоге.</p></div>
+      <div class="demo-notice"><span class="demo-pill">DEMO</span><span>Демо: тестовые данные,<br><strong>ИИ не подключён</strong></span></div>
+    </div>
+
+    <div class="workspace">
+      <section class="chat-panel" aria-labelledby="chat-heading">
+        <div class="panel-heading"><div class="heading-group"><span class="assistant-avatar"><svg class="icon" aria-hidden="true"><use href="#icon-spark"></use></svg></span><div><h2 id="chat-heading">Ваш EKT-помощник</h2><p>Подбор из тестового каталога</p></div></div><span class="session-label"><span class="status-dot"></span> Демо-сессия</span></div>
+        <div class="conversation" id="conversation" role="log" aria-label="Сообщения чата" aria-live="polite" aria-relevant="additions"></div>
+        <div class="composer-area">
+          <div class="suggestions" aria-label="Примеры запросов"><button type="button" data-prompt="Подбери кабель для проводки">Кабель для проводки <span>↗</span></button><button type="button" data-prompt="Покажи автоматические выключатели">Автоматические выключатели <span>↗</span></button><button type="button" data-prompt="Покажи все товары">Все товары <span>↗</span></button></div>
+          <form id="message-form" class="message-form">
+            <label class="sr-only" for="message-input">Сообщение помощнику</label>
+            <textarea id="message-input" rows="1" maxlength="500" placeholder="Например, нужен кабель для проводки…" aria-describedby="input-hint" required></textarea>
+            <button type="submit" id="send-button" class="send-button" aria-label="Отправить сообщение" disabled><svg class="icon" aria-hidden="true"><use href="#icon-arrow"></use></svg></button>
+          </form>
+          <div class="composer-footer"><span id="input-hint">Enter — отправить · Shift + Enter — новая строка</span><span>Только тестовые ответы</span></div>
+        </div>
+      </section>
+
+      <aside class="cart-panel" id="cart-panel" aria-labelledby="cart-heading" tabindex="-1">
+        <div class="cart-title"><h2 id="cart-heading"><svg class="icon" aria-hidden="true"><use href="#icon-bag"></use></svg> Демо-корзина</h2><span class="count-badge" id="cart-count">0</span></div>
+        <p class="cart-subtitle">Товары из текущего диалога</p>
+        <div id="cart-items"></div>
+        <div class="cart-total"><span>Итого</span><strong id="cart-total">0 ₸</strong></div>
+        <p class="cart-disclaimer"><svg class="icon" aria-hidden="true"><use href="#icon-check"></use></svg><span>Добавление только после вашего подтверждения. Это демо, заказ не оформляется.</span></p>
+      </aside>
+    </div>
+    <footer class="page-footer"><span>EKT · Учебный прототип</span><span>Тестовые цены и остатки · Корзина хранится до обновления страницы</span></footer>
+  </main>
+
+  <dialog id="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-description">
+    <form id="confirm-form" novalidate>
+      <div class="dialog-heading"><span class="dialog-icon"><svg class="icon" aria-hidden="true"><use href="#icon-bag"></use></svg></span><button type="button" class="icon-button" id="close-dialog" aria-label="Закрыть подтверждение"><svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg></button></div>
+      <p class="eyebrow">ДЕМО-КОРЗИНА</p><h2 id="confirm-title">Добавить товар?</h2><p id="confirm-description" class="muted">Проверьте количество и подтвердите добавление.</p>
+      <div class="confirm-product"><strong id="confirm-product-name"></strong><span id="confirm-product-sku" class="muted"></span><span id="confirm-unit-price"></span></div>
+      <div class="quantity-row"><label for="quantity-input">Количество<span id="available-stock" class="muted"></span></label><div class="quantity-control"><button type="button" id="decrease-quantity" aria-label="Уменьшить количество">−</button><input id="quantity-input" type="number" inputmode="numeric" min="1" step="1" value="1" required aria-describedby="available-stock quantity-error"><button type="button" id="increase-quantity" aria-label="Увеличить количество">+</button></div></div>
+      <p id="quantity-error" class="form-error" role="alert"></p>
+      <div class="confirm-total"><span>Сумма</span><strong id="confirm-total"></strong></div>
+      <div class="dialog-actions"><button type="button" class="secondary-button" id="cancel-confirmation">Отмена</button><button type="submit" class="primary-button" id="confirm-button">Подтвердить</button></div>
+      <p class="dialog-note">Изменится только корзина в этой демо-сессии.</p>
+    </form>
+  </dialog>
+  <div id="notification" class="notification" role="status" aria-live="polite"></div>
+  <noscript><p class="noscript">Для работы демо включите JavaScript в браузере.</p></noscript>
+</body>
+</html>
