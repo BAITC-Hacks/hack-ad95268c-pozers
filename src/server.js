@@ -8,12 +8,14 @@ require('dotenv').config({
 const express = require('express');
 const { randomUUID } = require('node:crypto');
 const { createChatService } = require('./services/chat');
-const { getProducts, EktApiError } = require('./services/ektApi');
+const { getProducts, getProductById, EktApiError } = require('./services/ektApi');
+const { createProductSearch } = require('./services/productSearch');
 
 const app = express();
 const port = process.env.PORT || 3000;
 const chat = createChatService();
 const sessions = new Map();
+const searchProducts = createProductSearch();
 
 app.use(express.json({ limit: '8kb' }));
 
@@ -64,6 +66,19 @@ app.get('/api/products', async (req, res) => {
     }
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Внутренняя ошибка сервера.' } });
   }
+});
+
+// Статический маршрут должен предшествовать /:id.
+app.get('/api/products/search', async (req, res, next) => {
+  try {
+    res.json(await searchProducts(req.query.q));
+  } catch (error) { next(error); }
+});
+
+app.get('/api/products/:id', async (req, res, next) => {
+  try {
+    res.json(await getProductById(req.params.id));
+  } catch (error) { next(error); }
 });
 
 app.use((error, req, res, next) => {

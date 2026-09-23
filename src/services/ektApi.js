@@ -30,6 +30,22 @@ async function getProductDetail(detailUrl) {
   return requestJson(url);
 }
 
+async function getProductById(id) {
+  if (typeof id !== 'string' || !/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id))) {
+    throw new EktApiError('ID товара должен быть целым положительным числом.', 400, 'INVALID_PRODUCT_ID');
+  }
+  const url = new URL(`${PRODUCTS_URL}/detail`);
+  url.searchParams.set('id', id);
+  try {
+    return await getProductDetail(url.href);
+  } catch (error) {
+    if (error instanceof EktApiError && error.upstreamStatus === 404) {
+      throw new EktApiError('Товар не найден в каталоге ekt.kz.', 404, 'PRODUCT_NOT_FOUND', 404);
+    }
+    throw error;
+  }
+}
+
 async function requestJson(url) {
   const { EKT_USERNAME, EKT_PASSWORD } = process.env;
   if (!EKT_USERNAME || !EKT_PASSWORD) {
@@ -72,4 +88,4 @@ async function requestJson(url) {
   }
 }
 
-module.exports = { getProducts, getProductDetail, EktApiError };
+module.exports = { getProducts, getProductDetail, getProductById, EktApiError };
