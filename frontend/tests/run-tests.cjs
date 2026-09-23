@@ -5,12 +5,18 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 async function runTests() {
-  const context = vm.createContext({ window: {} });
+  let fetchResult;
+  const fetchCalls = [];
+  const context = vm.createContext({ window: {}, AbortSignal, fetch: async (url, options) => {
+    fetchCalls.push({ url, options });
+    if (fetchResult instanceof Error) throw fetchResult;
+    return { ok: fetchResult.status === 200, status: fetchResult.status, json: async () => fetchResult.body };
+  } });
   const directory = path.resolve(__dirname, "..");
   for (const name of ["demo-data.js", "assistant-service.js", "cart.js"]) {
     vm.runInContext(fs.readFileSync(path.join(directory, name), "utf8"), context, { filename: name });
   }
-  const demo = context.window.EktDemo;
+  const demo = { ...context.window.EktApp, products: context.window.EktDemo.products };
   const checks = [];
   async function check(name, callback) {
     await callback();
@@ -95,17 +101,63 @@ async function runTests() {
     assert.equal(cart.prepare("missing").ok, false);
     assert.equal(cart.snapshot().totalCount, 0);
   });
-  await check("Blank messages are rejected; category, SKU and fallback responses work", async () => {
+  await check("Blank messages are rejected; real chat payload and products are adapted", async () => {
     await assert.rejects(demo.getReply("   "));
-    for (const [query, id] of [["Кабель", "demo-cable"], ["выключатель", "demo-breaker"], ["розетка", "demo-socket"], ["DEMO-KB-325", "demo-cable"]]) {
-      const reply = await demo.getReply(query);
-      assert.equal(reply.productIds.length, 1);
-      assert.equal(reply.productIds[0], id);
-      assert.ok(reply.text.length > 0);
-    }
-    assert.equal((await demo.getReply("все товары")).productIds.length, 3);
-    assert.match((await demo.getReply("Привет")).text, /ИИ пока не подключён/);
-    assert.equal((await demo.getReply("сертификат")).productIds.length, 0);
+    fetchResult = { status: 200, body: { message: "Реальный ответ", products: [{ id: 515279, name: "Legrand", article: "200300273_", quantity: 36, price: 26930, image: "https://ekt.kz/image.jpg", url: "https://ekt.kz/catalog/item" }] } };
+    const reply = await demo.getReply("Есть Legrand 40A?");
+    assert.equal(fetchCalls[0].url, "http://localhost:3000/api/chat");
+    assert.equal(fetchCalls[0].options.method, "POST");
+    assert.equal(JSON.parse(fetchCalls[0].options.body).message, "Есть Legrand 40A?");
+    assert.equal(reply.text, "Реальный ответ");
+    assert.equal(reply.products.length, 1);
+    assert.equal(reply.products[0].sku, "200300273_");
+    assert.equal(reply.products[0].stock, 36);
+    assert.equal(reply.products[0].id, "515279");
+    assert.equal(reply.products[0].price, 26930);
+    assert.equal(reply.products[0].features, undefined);
+    assert.equal(reply.products[0].certificateUrl, undefined);
+  });
+  await check("Unknown stock and price are not fabricated; unsafe URLs are removed", () => {
+    const item = demo.adaptProduct({ id: 123, name: "Без данных", image: "javascript:alert(1)", url: "data:text/html,test" });
+    assert.equal(item.stock, null);
+    assert.equal(item.price, null);
+    assert.equal(item.image, null);
+    assert.equal(item.url, null);
+    const cart = demo.createCart([item]);
+    assert.equal(cart.prepare(123).ok, false);
+  });
+  await check("Real numeric IDs work in cart and detail does not add anything", async () => {
+    fetchResult = { status: 200, body: { id: 515279, name: "Legrand", quantity: 2, price: 0 } };
+    const item = await demo.getProduct(515279);
+    assert.equal(fetchCalls.at(-1).url, "http://localhost:3000/api/products/515279");
+    const cart = demo.createCart();
+    cart.register([item]);
+    const pending = cart.prepare(515279);
+    assert.equal(cart.snapshot().totalCount, 0);
+    assert.equal(cart.setQuantity(pending.token, '3').ok, false);
+    assert.equal(cart.confirm(pending.token).ok, false);
+    cart.setQuantity(pending.token, '2');
+    cart.confirm(pending.token);
+    assert.equal(cart.snapshot().totalCount, 2);
+    assert.equal(cart.snapshot().totalPrice, 0);
+  });
+  await check("A refreshed lower stock is checked again on confirmation", () => {
+    const cart = demo.createCart([{ id: 123, stock: 5, price: 10 }]);
+    const pending = cart.prepare(123);
+    cart.setQuantity(pending.token, '5');
+    cart.register([{ id: 123, stock: 2, price: 10 }]);
+    assert.equal(cart.confirm(pending.token).ok, false);
+    assert.equal(cart.snapshot().totalCount, 0);
+  });
+  await check("Empty real results stay empty; demo products are never added", async () => {
+    fetchResult = { status: 200, body: { message: "Не найдено", products: [] } };
+    assert.equal((await demo.getReply('XYZ123NOTFOUND')).products.length, 0);
+  });
+  await check("API and network errors stay visible without exposing server internals or demo fallback", async () => {
+    fetchResult = { status: 503, body: { error: { code: "OPENAI_UNAVAILABLE", message: "private-upstream-details" } } };
+    await assert.rejects(demo.getReply('Legrand'), error => /HTTP 503/.test(error.message) && !/private/.test(error.message));
+    fetchResult = new Error('private-network-details');
+    await assert.rejects(demo.getReply('Legrand'), error => /backend/.test(error.message) && !/private/.test(error.message));
   });
   return { passed: checks.length, checks };
 }

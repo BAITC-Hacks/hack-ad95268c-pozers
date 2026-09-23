@@ -1,13 +1,13 @@
 (() => {
   "use strict";
-  const demo = window.EktDemo;
-  const cart = demo.createCart(demo.products);
+  const service = window.EktApp;
+  const cart = service.createCart();
   const byId = id => document.getElementById(id);
   const conversation = byId("conversation");
   const input = byId("message-input");
   const dialog = byId("confirm-dialog");
   const quantityInput = byId("quantity-input");
-  const money = value => `${new Intl.NumberFormat("ru-RU").format(value)} ₸`;
+  const money = value => typeof value === "number" ? new Intl.NumberFormat("ru-RU").format(value) : "Цена не указана";
   let sending = false;
   let confirmation = null;
   let opener = null;
@@ -38,13 +38,18 @@
     const card = element("article", "product-card");
     card.setAttribute("aria-label", product.name);
     const visual = element("div", "product-visual");
-    visual.append(element("span", "test-badge", "ТЕСТОВЫЙ ТОВАР"), icon(`product-${product.kind}`, "product-art"));
+    if (product.image) {
+      const image = element("img", "product-image");
+      image.src = product.image;
+      image.alt = product.name;
+      image.loading = "lazy";
+      image.addEventListener("error", () => visual.replaceChildren(element("span", "muted", "Фото недоступно")), { once: true });
+      visual.append(image);
+    } else visual.append(element("span", "muted", "Фото не указано"));
     const info = element("div", "product-info");
-    info.append(element("p", "product-sku", `Арт. ${product.sku}`), element("h3", "", product.name));
-    const features = element("ul", "product-features");
-    product.features.forEach(feature => features.append(element("li", "", feature)));
+    info.append(element("p", "product-sku", product.sku ? `Арт. ${product.sku}` : "Артикул не указан"), element("h3", "", product.name));
     const price = element("div", "product-price", money(product.price));
-    price.append(element("span", "price-unit", `/ ${product.unit}`));
+    price.append(element("span", "price-unit", " · цена по каталогу"));
     const stock = element("p", "stock");
     stock.dataset.stockId = product.id;
     const button = element("button", "add-button", "+ Добавить в корзину");
@@ -52,11 +57,10 @@
     button.dataset.productId = product.id;
     button.setAttribute("aria-label", `Добавить в корзину: ${product.name}`);
     button.addEventListener("click", () => openConfirmation(product.id, button));
-    info.append(features, price, stock, button);
-    // Render a certificate only when the data contains an explicit, safe URL.
-    if (typeof product.certificateUrl === "string" && /^https?:\/\//i.test(product.certificateUrl)) {
-      const link = element("a", "certificate-link", "Сертификат");
-      link.href = product.certificateUrl;
+    info.append(price, stock, button);
+    if (product.url) {
+      const link = element("a", "certificate-link", "Открыть товар на ekt.kz");
+      link.href = product.url;
       link.target = "_blank";
       link.rel = "noopener noreferrer";
       link.prepend(icon("icon-file"));
@@ -65,34 +69,34 @@
     card.append(visual, info);
     return card;
   }
-  function appendMessage(role, text, productIds = [], scroll = true) {
+  function appendMessage(role, text, products = [], scroll = true) {
+    cart.register(products);
     const message = element("div", `message message-${role}`);
     const meta = element("div", "message-meta");
     meta.append(element("strong", "", role === "user" ? "Вы" : "EKT-помощник"));
-    if (role === "assistant") meta.append(element("span", "message-tag", "Тестовый ответ"));
     message.append(meta, element("p", "message-text", text));
-    const products = demo.products.filter(product => productIds.includes(product.id));
     if (products.length) {
       const heading = element("div", "catalog-heading");
-      heading.append(element("strong", "", "Подборка из демо-каталога"), element("span", "", `${products.length} из ${demo.products.length} товаров`));
+      heading.append(element("strong", "", "Товары ekt.kz"), element("span", "", `${products.length} товаров`));
       const grid = element("div", "product-grid");
       products.forEach(product => grid.append(productCard(product)));
-      message.append(heading, grid, element("p", "catalog-note", "Иллюстрации условные. Характеристики, цены и остатки приведены для тестирования."));
+      message.append(heading, grid, element("p", "catalog-note", "Данные каталога ekt.kz. Перед выбором количества проверим текущий остаток."));
     }
     conversation.append(message);
+    renderCart();
     refreshProductAvailability();
     if (scroll) message.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
   function refreshProductAvailability() {
     document.querySelectorAll("[data-product-id]").forEach(button => {
       const available = cart.available(button.dataset.productId);
-      button.disabled = available < 1;
-      button.textContent = available < 1 ? "Весь остаток в корзине" : "+ Добавить в корзину";
+      button.disabled = false;
+      button.textContent = available === 0 ? "Проверить остаток" : "+ Добавить в корзину";
     });
     document.querySelectorAll("[data-stock-id]").forEach(node => {
-      const product = demo.products.find(item => item.id === node.dataset.stockId);
+      const product = cart.getProduct(node.dataset.stockId);
       const available = cart.available(product.id);
-      node.textContent = `Остаток: ${product.stock} ${product.unit}${available < product.stock ? ` · Ещё доступно: ${available}` : ""}`;
+      node.textContent = product.stock === null ? "Остаток не указан — проверим перед добавлением" : `Остаток: ${product.stock}${available < product.stock ? ` · С учётом корзины: ${available}` : ""}`;
     });
   }
   function renderCart() {
@@ -111,9 +115,9 @@
     }
     snapshot.items.forEach(({ product, quantity, subtotal }) => {
       const item = element("article", "cart-item");
-      item.append(element("h3", "", product.name), element("div", "muted", `${product.sku} · Тестовый товар`));
+      item.append(element("h3", "", product.name), element("div", "muted", product.sku || "Артикул не указан"));
       const bottom = element("div", "cart-item-bottom");
-      bottom.append(element("span", "", `${quantity} ${product.unit} × ${money(product.price)}`), element("strong", "", money(subtotal)));
+      bottom.append(element("span", "", `${quantity} × ${money(product.price)}`), element("strong", "", money(subtotal)));
       const remove = element("button", "remove-item", "Удалить");
       remove.type = "button";
       remove.setAttribute("aria-label", `Удалить из корзины: ${product.name}`);
@@ -121,7 +125,7 @@
         cart.remove(product.id);
         renderCart();
         byId("cart-panel").focus({ preventScroll: true });
-        notify("Товар удалён из демо-корзины.");
+        notify("Товар удалён из локальной корзины.");
       });
       item.append(bottom, remove);
       container.append(item);
@@ -138,22 +142,33 @@
     byId("decrease-quantity").disabled = result.ok && result.quantity <= 1;
     byId("increase-quantity").disabled = result.ok && result.quantity >= cart.available(confirmation.product.id);
   }
-  function openConfirmation(id, source) {
-    if (dialog.open) return;
-    const result = cart.prepare(id);
-    if (!result.ok) return notify(result.error);
-    confirmation = result;
-    opener = source;
-    byId("confirm-product-name").textContent = result.product.name;
-    byId("confirm-product-sku").textContent = `Арт. ${result.product.sku} · Тестовый товар`;
-    byId("confirm-unit-price").textContent = `${money(result.product.price)} / ${result.product.unit}`;
-    byId("available-stock").textContent = `Доступно: ${result.available} ${result.product.unit}`;
-    quantityInput.value = "1";
-    quantityInput.max = result.available;
-    updateQuantity();
-    dialog.showModal();
-    quantityInput.focus();
-    quantityInput.select();
+  let preparing = false;
+  async function openConfirmation(id, source) {
+    if (dialog.open || preparing) return;
+    preparing = true;
+    source.disabled = true;
+    source.textContent = "Проверяем остаток…";
+    try {
+      const product = await service.getProduct(id);
+      if (product.id !== String(id)) throw new Error("Сервер вернул другой товар.");
+      cart.register([product]);
+      renderCart();
+      const result = cart.prepare(id);
+      if (!result.ok) return notify(result.error);
+      confirmation = result;
+      opener = source;
+      byId("confirm-product-name").textContent = result.product.name;
+      byId("confirm-product-sku").textContent = result.product.sku ? `Арт. ${result.product.sku}` : "Артикул не указан";
+      byId("confirm-unit-price").textContent = money(result.product.price);
+      byId("available-stock").textContent = `Доступно: ${result.available}`;
+      quantityInput.value = "1";
+      quantityInput.max = result.available;
+      updateQuantity();
+      dialog.showModal();
+      quantityInput.focus();
+      quantityInput.select();
+    } catch (error) { notify(error.message); }
+    finally { preparing = false; refreshProductAvailability(); }
   }
   function closeConfirmation() {
     if (confirmation) cart.cancel(confirmation.token);
@@ -175,7 +190,7 @@
     }
     renderCart();
     closeConfirmation();
-    notify(`Добавлено в демо-корзину: ${result.quantity} ${result.product.unit}`);
+    notify(`Добавлено в локальную корзину: ${result.quantity}`);
   });
   quantityInput.addEventListener("input", updateQuantity);
   ["decrease-quantity", "increase-quantity"].forEach((id, index) => byId(id).addEventListener("click", () => {
@@ -196,16 +211,19 @@
     const text = input.value.trim();
     if (!text || sending) return;
     sending = true;
+    byId("connection-status").textContent = "Ищем в каталоге…";
     input.value = "";
     input.style.height = "42px";
     updateSendButton();
     appendMessage("user", text);
     input.focus({ preventScroll: true });
     try {
-      const reply = await demo.getReply(text);
-      appendMessage("assistant", reply.text, reply.productIds);
-    } catch {
-      appendMessage("assistant", "Не удалось получить тестовый ответ. Попробуйте отправить сообщение ещё раз.");
+      const reply = await service.getReply(text);
+      appendMessage("assistant", reply.text, reply.products);
+      byId("connection-status").textContent = "Ответ получен от AI";
+    } catch (error) {
+      appendMessage("assistant", error.message);
+      byId("connection-status").textContent = "Ошибка запроса";
     } finally {
       sending = false;
       updateSendButton();
@@ -228,6 +246,6 @@
     input.value = button.dataset.prompt;
     sendMessage();
   }));
-  appendMessage("assistant", "Здравствуйте! Помогу познакомиться с каталогом EKT. Расскажите, что ищете, или выберите товар ниже.\nДля начала — три примера из нашего тестового каталога.", demo.products.map(product => product.id), false);
+  appendMessage("assistant", "Здравствуйте! Помогу найти товары ekt.kz. Укажите название, артикул или ID товара — например, «Есть Legrand 40A?».", [], false);
   renderCart();
 })();

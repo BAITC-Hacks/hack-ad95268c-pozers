@@ -5,9 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#16704c">
   <meta name="color-scheme" content="light">
-  <title>EKT AI Assistant — демо</title>
+  <title>EKT AI Assistant</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="demo-data.js" defer></script>
   <script src="assistant-service.js" defer></script>
   <script src="cart.js" defer></script>
   <script src="app.js" defer></script>
@@ -53,55 +52,55 @@
   <header class="site-header">
     <div class="header-inner">
       <a href="./index.html" class="brand" aria-label="EKT — главная"><span class="brand-mark">ekt<span>·</span></span><span class="brand-divider"></span><span class="brand-caption">Электротехника.<br>Просто и понятно.</span></a>
-      <a class="cart-shortcut" href="#cart-panel"><svg class="icon" aria-hidden="true"><use href="#icon-bag"></use></svg><span>Демо-корзина</span><span class="count-badge" id="header-cart-count">0</span></a>
+      <a class="cart-shortcut" href="#cart-panel"><svg class="icon" aria-hidden="true"><use href="#icon-bag"></use></svg><span>Локальная корзина</span><span class="count-badge" id="header-cart-count">0</span></a>
     </div>
   </header>
 
   <main class="page-shell">
     <div class="intro-row">
       <div><div class="eyebrow"><span class="status-dot"></span> ПОМОЩНИК ПО ПОДБОРУ ТОВАРОВ</div><h1>EKT <span>AI Assistant</span></h1><p class="intro-description">От вопроса к нужному товару — в одном диалоге.</p></div>
-      <div class="demo-notice"><span class="demo-pill">DEMO</span><span>Демо: тестовые данные,<br><strong>ИИ не подключён</strong></span></div>
+      <div class="demo-notice"><span class="demo-pill">EKT.KZ</span><span id="connection-status" role="status">Готов к запросу</span></div>
     </div>
 
     <div class="workspace">
       <section class="chat-panel" aria-labelledby="chat-heading">
-        <div class="panel-heading"><div class="heading-group"><span class="assistant-avatar"><svg class="icon" aria-hidden="true"><use href="#icon-spark"></use></svg></span><div><h2 id="chat-heading">Ваш EKT-помощник</h2><p>Подбор из тестового каталога</p></div></div><span class="session-label"><span class="status-dot"></span> Демо-сессия</span></div>
+        <div class="panel-heading"><div class="heading-group"><span class="assistant-avatar"><svg class="icon" aria-hidden="true"><use href="#icon-spark"></use></svg></span><div><h2 id="chat-heading">Ваш EKT-помощник</h2><p>Поиск по каталогу ekt.kz</p></div></div><span class="session-label"><span class="status-dot"></span> Помощник</span></div>
         <div class="conversation" id="conversation" role="log" aria-label="Сообщения чата" aria-live="polite" aria-relevant="additions"></div>
         <div class="composer-area">
-          <div class="suggestions" aria-label="Примеры запросов"><button type="button" data-prompt="Подбери кабель для проводки">Кабель для проводки <span>↗</span></button><button type="button" data-prompt="Покажи автоматические выключатели">Автоматические выключатели <span>↗</span></button><button type="button" data-prompt="Покажи все товары">Все товары <span>↗</span></button></div>
+          <div class="suggestions" aria-label="Примеры запросов"><button type="button" data-prompt="Есть Legrand 40A?">Legrand 40A <span>↗</span></button><button type="button" data-prompt="Какие характеристики у товара 515279?">Характеристики товара <span>↗</span></button><button type="button" data-prompt="Сколько осталось товара с артикулом 310100080_?">Остаток по артикулу <span>↗</span></button></div>
           <form id="message-form" class="message-form">
             <label class="sr-only" for="message-input">Сообщение помощнику</label>
-            <textarea id="message-input" rows="1" maxlength="500" placeholder="Например, нужен кабель для проводки…" aria-describedby="input-hint" required></textarea>
+            <textarea id="message-input" rows="1" maxlength="2000" placeholder="Например, есть Legrand 40A?" aria-describedby="input-hint" required></textarea>
             <button type="submit" id="send-button" class="send-button" aria-label="Отправить сообщение" disabled><svg class="icon" aria-hidden="true"><use href="#icon-arrow"></use></svg></button>
           </form>
-          <div class="composer-footer"><span id="input-hint">Enter — отправить · Shift + Enter — новая строка</span><span>Только тестовые ответы</span></div>
+          <div class="composer-footer"><span id="input-hint">Enter — отправить · Shift + Enter — новая строка</span><span>Реальные данные ekt.kz</span></div>
         </div>
       </section>
 
       <aside class="cart-panel" id="cart-panel" aria-labelledby="cart-heading" tabindex="-1">
-        <div class="cart-title"><h2 id="cart-heading"><svg class="icon" aria-hidden="true"><use href="#icon-bag"></use></svg> Демо-корзина</h2><span class="count-badge" id="cart-count">0</span></div>
+        <div class="cart-title"><h2 id="cart-heading"><svg class="icon" aria-hidden="true"><use href="#icon-bag"></use></svg> Локальная корзина</h2><span class="count-badge" id="cart-count">0</span></div>
         <p class="cart-subtitle">Товары из текущего диалога</p>
         <div id="cart-items"></div>
-        <div class="cart-total"><span>Итого</span><strong id="cart-total">0 ₸</strong></div>
-        <p class="cart-disclaimer"><svg class="icon" aria-hidden="true"><use href="#icon-check"></use></svg><span>Добавление только после вашего подтверждения. Это демо, заказ не оформляется.</span></p>
+        <div class="cart-total"><span>Итого</span><strong id="cart-total">0</strong></div>
+        <p class="cart-disclaimer"><svg class="icon" aria-hidden="true"><use href="#icon-check"></use></svg><span>Добавление только после вашего подтверждения. Локальная корзина не изменяет корзину ekt.kz и не резервирует товары.</span></p>
       </aside>
     </div>
-    <footer class="page-footer"><span>EKT · Учебный прототип</span><span>Тестовые цены и остатки · Корзина хранится до обновления страницы</span></footer>
+    <footer class="page-footer"><span>EKT · Учебный прототип</span><span>Локальная корзина хранится до обновления страницы</span></footer>
   </main>
 
   <dialog id="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-description">
     <form id="confirm-form" novalidate>
       <div class="dialog-heading"><span class="dialog-icon"><svg class="icon" aria-hidden="true"><use href="#icon-bag"></use></svg></span><button type="button" class="icon-button" id="close-dialog" aria-label="Закрыть подтверждение"><svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg></button></div>
-      <p class="eyebrow">ДЕМО-КОРЗИНА</p><h2 id="confirm-title">Добавить товар?</h2><p id="confirm-description" class="muted">Проверьте количество и подтвердите добавление.</p>
+      <p class="eyebrow">ЛОКАЛЬНАЯ КОРЗИНА</p><h2 id="confirm-title">Добавить товар?</h2><p id="confirm-description" class="muted">Проверьте количество и подтвердите добавление.</p>
       <div class="confirm-product"><strong id="confirm-product-name"></strong><span id="confirm-product-sku" class="muted"></span><span id="confirm-unit-price"></span></div>
       <div class="quantity-row"><label for="quantity-input">Количество<span id="available-stock" class="muted"></span></label><div class="quantity-control"><button type="button" id="decrease-quantity" aria-label="Уменьшить количество">−</button><input id="quantity-input" type="number" inputmode="numeric" min="1" step="1" value="1" required aria-describedby="available-stock quantity-error"><button type="button" id="increase-quantity" aria-label="Увеличить количество">+</button></div></div>
       <p id="quantity-error" class="form-error" role="alert"></p>
       <div class="confirm-total"><span>Сумма</span><strong id="confirm-total"></strong></div>
       <div class="dialog-actions"><button type="button" class="secondary-button" id="cancel-confirmation">Отмена</button><button type="submit" class="primary-button" id="confirm-button">Подтвердить</button></div>
-      <p class="dialog-note">Изменится только корзина в этой демо-сессии.</p>
+      <p class="dialog-note">Изменится только локальная корзина в этом браузере.</p>
     </form>
   </dialog>
   <div id="notification" class="notification" role="status" aria-live="polite"></div>
-  <noscript><p class="noscript">Для работы демо включите JavaScript в браузере.</p></noscript>
+  <noscript><p class="noscript">Для работы помощника включите JavaScript в браузере.</p></noscript>
 </body>
 </html>

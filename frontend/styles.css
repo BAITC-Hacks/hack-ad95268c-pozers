@@ -1343,6 +1343,12 @@ dialog .muted {
   }
 }
 
+.product-image {
+  width: 100%;
+  height: 130px;
+  object-fit: contain;
+}
+
 @media(prefers-reduced-motion:reduce) {
   *,*::before,*::after {
     scroll-behavior:auto!important;

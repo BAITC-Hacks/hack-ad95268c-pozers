@@ -4,12 +4,27 @@ const { createAiAssistant, AiError } = require('./services/ai');
 const { createProductSearch } = require('./services/productSearch');
 
 // Передача зависимостей позволяет проверять HTTP-маршруты без внешних API.
-function createApp({ catalog = ektApi, searchProducts = createProductSearch(catalog.getProducts), aiClient } = {}) {
+function createApp({ catalog = ektApi, searchProducts = createProductSearch(catalog.getProducts), aiClient, frontendOrigin = process.env.FRONTEND_ORIGIN || 'http://localhost:4173' } = {}) {
   const app = express();
   const { getProducts, getProductById } = catalog;
   const { EktApiError } = ektApi;
   const chat = createAiAssistant({ searchProducts, getProductById, client: aiClient });
 
+  app.use((req, res, next) => {
+    res.vary('Origin');
+    const origin = req.get('Origin');
+    if (origin && origin !== frontendOrigin) return res.status(403).json({ error: { code: 'ORIGIN_NOT_ALLOWED', message: 'Этот адрес frontend не разрешён.' } });
+    if (origin) res.set('Access-Control-Allow-Origin', frontendOrigin);
+    if (req.method === 'OPTIONS') {
+      const method = req.get('Access-Control-Request-Method');
+      const headers = (req.get('Access-Control-Request-Headers') || '').toLowerCase().split(',').map(value => value.trim()).filter(Boolean);
+      if (!['GET', 'POST'].includes(method) || headers.some(header => header !== 'content-type')) return res.sendStatus(403);
+      res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.set('Access-Control-Allow-Headers', 'Content-Type');
+      return res.sendStatus(204);
+    }
+    next();
+  });
   app.use(express.json({ limit: '8kb' }));
 
   app.post('/api/chat', async (req, res, next) => {

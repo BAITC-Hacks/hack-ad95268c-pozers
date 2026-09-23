@@ -5,7 +5,10 @@
   "description": "Minimal Express backend for the Pozers hackathon project",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node --watch --watch-path=src --watch-path=.env src/server.js"
+    "dev": "node --watch --watch-path=src --watch-path=.env src/server.js",
+    "frontend": "node frontend/server.cjs",
+    "test": "node --test test/*.test.js && node frontend/tests/run-tests.cjs",
+    "test:browser": "node frontend/tests/browser-smoke.cjs"
   },
   "engines": {
     "node": ">=22"
@@ -14,5 +17,8 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "openai": "^7.23.0"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.63.0"
   }
 }

@@ -190,7 +190,9 @@ HTTP 502/503 сообщает об ошибке OpenAI безопасным те
 
 Чат обрабатывает каждый запрос отдельно, без истории и cookie-сессий.
 Старый чат по правилам и pending actions заменены новым API.
-Корзина, оплата, заказы, загрузка файлов и frontend не реализованы.
+Frontend подключён к этому API; локальная корзина работает в браузере только
+после явного подтверждения. Серверная корзина, оплата, заказы и загрузка файлов
+не реализованы.
 
 Проверка из PowerShell (UTF-8 сохраняет кириллицу):
 
@@ -207,9 +209,30 @@ foreach ($message in $messages) {
 }
 ```
 
-Все автоматические тесты: `node --test`. OpenAI и ekt.kz в них замоканы;
+Все автоматические тесты: `npm.cmd test`. OpenAI и ekt.kz в них замоканы;
 реальные API-кредиты не расходуются. Живая проверка AI требует ключа.
 
 Реализация сверена с [официальной документацией function calling](https://developers.openai.com/api/docs/guides/function-calling),
 [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs)
 и [моделью GPT-5.6 Luna](https://developers.openai.com/api/docs/models/gpt-5.6-luna).
+
+## Запуск интеграции
+
+Из корня проекта: `npm.cmd install`, затем `npm.cmd run dev` для backend.
+Во втором терминале: `npm.cmd run frontend`.
+Откройте **http://localhost:4173**.
+
+CORS разрешает адрес из `FRONTEND_ORIGIN` (по умолчанию
+`http://localhost:4173`); порт frontend задаёт `FRONTEND_PORT` (по умолчанию
+4173). При смене порта согласуйте обе настройки в `.env` и перезапустите
+серверы. Frontend отправляет сообщения на `http://localhost:3000/api/chat`.
+
+Результаты AI и товары берутся из backend, без демо-подмены. Перед выбором
+количества frontend обновляет detail товара. Добавление происходит только
+после кнопки «Подтвердить». Локальная корзина не связана с корзиной ekt.kz,
+не резервирует товары и очищается при обновлении страницы.
+
+Тесты: `npm.cmd test` — 36 backend и 13 frontend-проверок без платных API.
+`npm.cmd run test:browser` — отдельная живая проверка в установленном Edge;
+требует запущенных серверов и расходует реальные OpenAI-кредиты.
+Подробности и результаты браузерного сценария — в [frontend/README.md](frontend/README.md).
