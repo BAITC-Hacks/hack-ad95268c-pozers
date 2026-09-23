@@ -2,6 +2,9 @@ const express = require('express');
 const ektApi = require('./services/ektApi');
 const { createAiAssistant, AiError } = require('./services/ai');
 const { createProductSearch } = require('./services/productSearch');
+const { createAuditService } = require('./services/audit');
+const { createCartRouter } = require('./routes/cart');
+const { CartError } = require('./services/cart');
 
 // Передача зависимостей позволяет проверять HTTP-маршруты без внешних API.
 function createApp({ catalog = ektApi, searchProducts = createProductSearch(catalog.getProducts), aiClient, frontendOrigin = process.env.FRONTEND_ORIGIN || 'http://localhost:4173' } = {}) {
@@ -9,12 +12,14 @@ function createApp({ catalog = ektApi, searchProducts = createProductSearch(cata
   const { getProducts, getProductById } = catalog;
   const { EktApiError } = ektApi;
   const chat = createAiAssistant({ searchProducts, getProductById, client: aiClient });
+  const audit = createAuditService({ searchProducts, getProductById });
 
   app.use((req, res, next) => {
     res.vary('Origin');
     const origin = req.get('Origin');
     if (origin && origin !== frontendOrigin) return res.status(403).json({ error: { code: 'ORIGIN_NOT_ALLOWED', message: 'Этот адрес frontend не разрешён.' } });
     if (origin) res.set('Access-Control-Allow-Origin', frontendOrigin);
+    if (origin && (req.path === '/api/cart' || req.path.startsWith('/api/cart/'))) res.set('Access-Control-Allow-Credentials', 'true');
     if (req.method === 'OPTIONS') {
       const method = req.get('Access-Control-Request-Method');
       const headers = (req.get('Access-Control-Request-Headers') || '').toLowerCase().split(',').map(value => value.trim()).filter(Boolean);
@@ -26,6 +31,7 @@ function createApp({ catalog = ektApi, searchProducts = createProductSearch(cata
     next();
   });
   app.use(express.json({ limit: '8kb' }));
+  app.use('/api/cart', createCartRouter(getProductById));
 
   app.post('/api/chat', async (req, res, next) => {
     if (typeof req.body?.message !== 'string' || !req.body.message.trim() || req.body.message.length > 2000) {
@@ -41,6 +47,11 @@ function createApp({ catalog = ektApi, searchProducts = createProductSearch(cata
 
   app.get('/api/health', (req, res) => {
     res.json({ ok: true });
+  });
+
+  app.post('/api/audit', async (req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    try { res.json(await audit(req.body?.text)); } catch (error) { next(error); }
   });
 
   app.get('/api/products', async (req, res) => {
@@ -75,7 +86,7 @@ function createApp({ catalog = ektApi, searchProducts = createProductSearch(cata
   });
 
   app.use((error, req, res, next) => {
-    if (error instanceof EktApiError || error instanceof AiError) return res.status(error.status).json({ error: {
+    if (error instanceof EktApiError || error instanceof AiError || error instanceof CartError) return res.status(error.status).json({ error: {
       code: error.code, message: error.message,
       ...(error.upstreamStatus !== undefined && { upstreamStatus: error.upstreamStatus }),
     } });

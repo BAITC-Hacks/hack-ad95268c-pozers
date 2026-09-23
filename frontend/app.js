@@ -1,7 +1,7 @@
 (() => {
   "use strict";
   const service = window.EktApp;
-  const cart = service.createCart();
+  const cart = service.createServerCart();
   const byId = id => document.getElementById(id);
   const conversation = byId("conversation");
   const input = byId("message-input");
@@ -10,8 +10,14 @@
   const money = value => typeof value === "number" ? new Intl.NumberFormat("ru-RU").format(value) : "Цена не указана";
   let sending = false;
   let confirmation = null;
+  let confirmationBusy = false;
   let opener = null;
   let notificationTimer;
+  let revisor;
+  const batchDialog = byId('batch-dialog');
+  let batchPreparation = null;
+  let batchPreparing = false;
+  let batchConfirming = false;
 
   function element(tag, className, text) {
     const node = document.createElement(tag);
@@ -121,11 +127,15 @@
       const remove = element("button", "remove-item", "Удалить");
       remove.type = "button";
       remove.setAttribute("aria-label", `Удалить из корзины: ${product.name}`);
-      remove.addEventListener("click", () => {
-        cart.remove(product.id);
-        renderCart();
-        byId("cart-panel").focus({ preventScroll: true });
-        notify("Товар удалён из локальной корзины.");
+      remove.addEventListener("click", async () => {
+        remove.disabled = true;
+        try {
+          await cart.remove(product.id);
+          revisor?.invalidateAudit();
+          renderCart();
+          byId("cart-panel").focus({ preventScroll: true });
+          notify("Товар удалён из серверной корзины.");
+        } catch (error) { notify(error.message); remove.disabled = false; }
       });
       item.append(bottom, remove);
       container.append(item);
@@ -133,7 +143,7 @@
     refreshProductAvailability();
   }
   function updateQuantity() {
-    if (!confirmation) return;
+    if (!confirmation || confirmationBusy) return;
     const result = cart.setQuantity(confirmation.token, quantityInput.value);
     byId("quantity-error").textContent = result.ok ? "" : result.error;
     quantityInput.setAttribute("aria-invalid", String(!result.ok));
@@ -144,16 +154,13 @@
   }
   let preparing = false;
   async function openConfirmation(id, source) {
-    if (dialog.open || preparing) return;
+    if (dialog.open || preparing || batchDialog.open || batchPreparing) return;
     preparing = true;
     source.disabled = true;
     source.textContent = "Проверяем остаток…";
     try {
-      const product = await service.getProduct(id);
-      if (product.id !== String(id)) throw new Error("Сервер вернул другой товар.");
-      cart.register([product]);
+      const result = await cart.prepare(id);
       renderCart();
-      const result = cart.prepare(id);
       if (!result.ok) return notify(result.error);
       confirmation = result;
       opener = source;
@@ -170,31 +177,46 @@
     } catch (error) { notify(error.message); }
     finally { preparing = false; refreshProductAvailability(); }
   }
-  function closeConfirmation() {
-    if (confirmation) cart.cancel(confirmation.token);
+  function lockConfirmation(locked) {
+    confirmationBusy = locked;
+    for (const id of ['quantity-input', 'confirm-button', 'cancel-confirmation', 'close-dialog', 'decrease-quantity', 'increase-quantity']) byId(id).disabled = locked;
+  }
+  async function closeConfirmation() {
+    if (confirmationBusy) return;
+    lockConfirmation(true);
+    if (confirmation) {
+      const result = await cart.cancel(confirmation.token);
+      if (!result.ok) notify(result.error);
+    }
     confirmation = null;
     dialog.close();
+    lockConfirmation(false);
+    renderCart();
     if (opener && !opener.disabled) opener.focus({ preventScroll: true });
     else byId("cart-panel").focus({ preventScroll: true });
   }
-  byId("confirm-form").addEventListener("submit", event => {
+  byId("confirm-form").addEventListener("submit", async event => {
     event.preventDefault();
-    if (!confirmation) return;
+    if (!confirmation || confirmationBusy) return;
     updateQuantity();
     if (byId("confirm-button").disabled) return;
-    byId("confirm-button").disabled = true;
-    const result = cart.confirm(confirmation.token);
+    lockConfirmation(true);
+    byId('quantity-error').textContent = 'Перепроверяем остаток на сервере…';
+    const result = await cart.confirm(confirmation.token);
+    lockConfirmation(false);
     if (!result.ok) {
+      updateQuantity();
       byId("quantity-error").textContent = result.error;
       return;
     }
     renderCart();
-    closeConfirmation();
-    notify(`Добавлено в локальную корзину: ${result.quantity}`);
+    revisor?.invalidateAudit();
+    await closeConfirmation();
+    notify(`Добавлено в серверную корзину: ${result.quantity}`);
   });
   quantityInput.addEventListener("input", updateQuantity);
   ["decrease-quantity", "increase-quantity"].forEach((id, index) => byId(id).addEventListener("click", () => {
-    if (!confirmation) return;
+    if (!confirmation || confirmationBusy) return;
     const value = Number(quantityInput.value);
     const base = Number.isSafeInteger(value) ? value : 1;
     quantityInput.value = Math.max(1, Math.min(cart.available(confirmation.product.id), base + (index ? 1 : -1)));
@@ -206,6 +228,7 @@
 
   function updateSendButton() {
     byId("send-button").disabled = sending || !input.value.trim();
+    revisor?.update();
   }
   async function sendMessage() {
     const text = input.value.trim();
@@ -246,6 +269,85 @@
     input.value = button.dataset.prompt;
     sendMessage();
   }));
+  async function prepareBatch(items, source) {
+    if (batchPreparing || batchDialog.open || dialog.open || preparing) return;
+    batchPreparing = true;
+    try {
+      const proposal = await cart.prepareBatch(items);
+      renderCart();
+      if (!proposal.ok) throw new Error(proposal.error);
+      batchPreparation = proposal;
+      opener = source;
+      const list = byId('batch-items'); list.replaceChildren();
+      let total = 0;
+      for (const item of proposal.items) {
+        const row = element('article', 'batch-item');
+        row.append(element('strong', '', item.product.name), element('p', 'muted', `${item.product.sku || 'Артикул не указан'} · Количество: ${item.quantity} · Цена: ${money(item.product.price)}`));
+        list.append(row);
+        total = total === null || item.product.price === null ? null : total + item.quantity * item.product.price;
+      }
+      byId('batch-total').textContent = money(total);
+      byId('batch-error').textContent = '';
+      byId('batch-confirm').disabled = false;
+      batchDialog.showModal();
+    } finally { batchPreparing = false; revisor?.update(); }
+  }
+  async function closeBatch() {
+    if (batchConfirming) return;
+    batchConfirming = true;
+    byId('batch-cancel').disabled = true;
+    byId('batch-confirm').disabled = true;
+    if (batchPreparation) {
+      const result = await cart.cancel(batchPreparation.token);
+      if (!result.ok) notify(result.error);
+    }
+    batchPreparation = null;
+    batchDialog.close();
+    batchConfirming = false;
+    byId('batch-cancel').disabled = false;
+    renderCart();
+    revisor?.update();
+    if (opener?.isConnected && !opener.disabled) opener.focus({ preventScroll: true });
+  }
+  byId('batch-cancel').addEventListener('click', closeBatch);
+  batchDialog.addEventListener('cancel', event => { event.preventDefault(); closeBatch(); });
+  byId('batch-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!batchPreparation || batchConfirming) return;
+    const proposal = batchPreparation;
+    batchConfirming = true; byId('batch-confirm').disabled = true;
+    byId('batch-cancel').disabled = true;
+    byId('batch-error').textContent = 'Перепроверяем остатки…';
+    try {
+      const result = await cart.confirm(proposal.token);
+      if (!result.ok) throw new Error(result.error);
+      batchConfirming = false;
+      await closeBatch(); renderCart(); revisor.invalidateAudit();
+      notify('Выбранные товары добавлены в серверную корзину.');
+    } catch (error) {
+      if (batchPreparation === proposal) byId('batch-error').textContent = error.message;
+    } finally {
+      batchConfirming = false;
+      byId('batch-cancel').disabled = false;
+      if (batchPreparation === proposal) byId('batch-confirm').disabled = false;
+    }
+  });
+  revisor = service.createRevisor({ prepareBatch, toast: notify, canPrepare: () => !sending && !preparing && !dialog.open && !batchPreparing && !batchDialog.open });
+  function route() {
+    const view = location.hash === '#audit' ? 'audit' : location.hash === '#chat' || !location.hash ? 'chat' : null;
+    if (!view) return;
+    byId('chat-section').hidden = view !== 'chat';
+    byId('audit-panel').hidden = view !== 'audit';
+    document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.view === view)));
+  }
+  document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => { location.hash = button.dataset.view; route(); }));
+  window.addEventListener('hashchange', route); route();
   appendMessage("assistant", "Здравствуйте! Помогу найти товары ekt.kz. Укажите название, артикул или ID товара — например, «Есть Legrand 40A?».", [], false);
   renderCart();
+  async function refreshCart() {
+    try { await cart.refresh(); renderCart(); }
+    catch (error) { notify(error.message); }
+  }
+  document.querySelector('.cart-shortcut').addEventListener('click', refreshCart);
+  refreshCart();
 })();
