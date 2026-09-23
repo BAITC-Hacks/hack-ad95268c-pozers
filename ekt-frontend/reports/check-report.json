@@ -1,0 +1,480 @@
+{
+  "run_id": "4b8d56b0-9c59-4542-89e7-029073f748c6",
+  "build": "2.0.0",
+  "suite": "core",
+  "scope": "isolated-local-demo",
+  "data_mode": "demo",
+  "started_at": "2026-09-23T10:09:00.041Z",
+  "checks": [
+    {
+      "id": "catalog",
+      "name": "Источник, цена и остаток",
+      "expected": "DEMO-001: 2850 ₸, 24 шт.; источник и время чтения показаны",
+      "passed": true,
+      "observed": {
+        "sku": "DEMO-001",
+        "price": 2850,
+        "stock": 24,
+        "data_mode": "demo",
+        "source": "demo:catalog",
+        "fetched_at": "2026-09-23T10:09:00.084Z"
+      },
+      "trace": [
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/chat",
+          "status": 200,
+          "request_id": "f83c0d2b-856e-4b8b-82a6-8d2efbce32ed"
+        }
+      ],
+      "duration_ms": 44
+    },
+    {
+      "id": "analog",
+      "name": "Таблица различий аналогов",
+      "expected": "C→B отмечено как различие; неизвестный монтаж не объявляется совместимым",
+      "passed": true,
+      "observed": {
+        "C16": "requires_review",
+        "B16": "incompatible",
+        "difference": "C → B",
+        "dimensions": "unknown"
+      },
+      "trace": [
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/chat",
+          "status": 200,
+          "request_id": "ff98aae7-6a6d-44e3-a54f-41a4d618530f"
+        }
+      ],
+      "duration_ms": 13
+    },
+    {
+      "id": "terms",
+      "name": "Условия не выдаются за реальные",
+      "expected": "Ответ про покупку явно относится к вымышленному справочнику",
+      "passed": true,
+      "observed": {
+        "source": "demo:terms",
+        "data_mode": "demo",
+        "message": "Учебный пример условий: оплата по счёту; получение — самовывоз; минимальное количество — 1 единица товара. Это вымышленные условия для проверки интерфейса, а не правила ekt.kz."
+      },
+      "trace": [
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/chat",
+          "status": 200,
+          "request_id": "ffc346de-3013-4d43-904c-dedbbb61db11"
+        }
+      ],
+      "duration_ms": 10
+    },
+    {
+      "id": "no-consent",
+      "name": "Предложение ≠ добавление",
+      "expected": "После подготовки корзина пуста, версия 0",
+      "passed": true,
+      "observed": {
+        "cart_items": 0,
+        "revision": 0
+      },
+      "trace": [
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/proposals",
+          "status": 200,
+          "request_id": "b0b5f066-35b0-490d-b31b-0dde2bedf189"
+        },
+        {
+          "session": "session-1",
+          "method": "GET",
+          "path": "/api/cart",
+          "status": 200
+        }
+      ],
+      "duration_ms": 11
+    },
+    {
+      "id": "negative",
+      "name": "«Да, но не добавляй»",
+      "expected": "Отрицание не подтверждает покупку; предложение остаётся неподтверждённым",
+      "passed": true,
+      "observed": {
+        "cart_items": 0,
+        "proposal_status": "pending"
+      },
+      "trace": [
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/proposals",
+          "status": 200,
+          "request_id": "5f68b038-9d3d-4b60-a030-c584683e8030"
+        },
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/chat",
+          "status": 200,
+          "request_id": "5c9f9a5d-ac7b-4861-9f5f-65733388b7bd"
+        },
+        {
+          "session": "session-1",
+          "method": "GET",
+          "path": "/api/cart",
+          "status": 200
+        },
+        {
+          "session": "session-1",
+          "method": "GET",
+          "path": "/api/session",
+          "status": 200
+        }
+      ],
+      "duration_ms": 15
+    },
+    {
+      "id": "confirmed",
+      "name": "Подтверждение и актуальная корзина",
+      "expected": "После подтверждения 2 шт., 5700 ₸; GET корзины совпадает",
+      "passed": true,
+      "observed": {
+        "quantity": 2,
+        "total": 5700,
+        "revision": 1,
+        "cart_url": "#cart"
+      },
+      "trace": [
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/proposals",
+          "status": 200,
+          "request_id": "a1b0b951-d95e-4c19-9dba-a58d760749cf"
+        },
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/confirm",
+          "status": 200,
+          "request_id": "651916a4-1244-4118-b28e-8fff96dd9446"
+        },
+        {
+          "session": "session-1",
+          "method": "GET",
+          "path": "/api/cart",
+          "status": 200
+        }
+      ],
+      "duration_ms": 11
+    },
+    {
+      "id": "refusal",
+      "name": "Отказ при превышении остатка",
+      "expected": "20 шт. уже в корзине + ещё 5 > 24; HTTP 409, остаётся 20",
+      "passed": true,
+      "observed": {
+        "http_status": 409,
+        "error_code": "INSUFFICIENT_STOCK",
+        "reason": "Доступно 24 шт.; уже в корзине 20. Количество не изменено.",
+        "requested_add": 5,
+        "stock": 24,
+        "cart_quantity_after": 20,
+        "revision": 1
+      },
+      "trace": [
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/proposals",
+          "status": 200,
+          "request_id": "28ee4c64-6481-47f7-ba2f-5bdf8a3a7350"
+        },
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/confirm",
+          "status": 200,
+          "request_id": "dc3eb286-d1f3-4eea-8183-da64180b49ad"
+        },
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/proposals",
+          "status": 409,
+          "request_id": "bd472643-4235-4d52-bcdc-c15f4428c9e7",
+          "error_code": "INSUFFICIENT_STOCK"
+        },
+        {
+          "session": "session-1",
+          "method": "GET",
+          "path": "/api/cart",
+          "status": 200
+        }
+      ],
+      "duration_ms": 13
+    },
+    {
+      "id": "cancel",
+      "name": "Отменённое предложение",
+      "expected": "После отмены подтверждение отклонено, корзина пуста",
+      "passed": true,
+      "observed": {
+        "http_status": 409,
+        "code": "PROPOSAL_CANCELLED",
+        "cart_items": 0
+      },
+      "trace": [
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/proposals",
+          "status": 200,
+          "request_id": "3f4bcce5-c376-4dec-94f5-c0f65edf326b"
+        },
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/cancel",
+          "status": 200,
+          "request_id": "995c6561-0be0-4dac-8eb2-5cf18d5ea44a"
+        },
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/confirm",
+          "status": 409,
+          "request_id": "abeadabe-86b9-4798-9df9-acf9aeb0bf02",
+          "error_code": "PROPOSAL_CANCELLED"
+        },
+        {
+          "session": "session-1",
+          "method": "GET",
+          "path": "/api/cart",
+          "status": 200
+        }
+      ],
+      "duration_ms": 11
+    },
+    {
+      "id": "repeat",
+      "name": "Пять подтверждений → одна запись",
+      "expected": "5 одновременных HTTP-запросов: 2 шт. в корзине, версия 1",
+      "passed": true,
+      "observed": {
+        "concurrent_requests": 5,
+        "http_statuses": [
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "expected_quantity": 2,
+        "actual_quantity": 2,
+        "writes": 1,
+        "replay_with_new_key_writes": 1
+      },
+      "trace": [
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/proposals",
+          "status": 200,
+          "request_id": "4c11cb99-328c-493b-a9ea-00812e3ba780"
+        },
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/confirm",
+          "status": 200,
+          "request_id": "5eb7d155-f8a6-41c0-883e-68649c011926"
+        },
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/confirm",
+          "status": 200,
+          "request_id": "5eb7d155-f8a6-41c0-883e-68649c011926"
+        },
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/confirm",
+          "status": 200,
+          "request_id": "5eb7d155-f8a6-41c0-883e-68649c011926"
+        },
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/confirm",
+          "status": 200,
+          "request_id": "5eb7d155-f8a6-41c0-883e-68649c011926"
+        },
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/confirm",
+          "status": 200,
+          "request_id": "5eb7d155-f8a6-41c0-883e-68649c011926"
+        },
+        {
+          "session": "session-1",
+          "method": "GET",
+          "path": "/api/cart",
+          "status": 200
+        },
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/confirm",
+          "status": 200,
+          "request_id": "82b5478f-6682-4984-a1d6-b3d282045c52"
+        }
+      ],
+      "duration_ms": 17
+    },
+    {
+      "id": "sessions",
+      "name": "Чужая сессия не меняет корзину",
+      "expected": "Подтверждение из другой сессии: 404, её корзина пуста",
+      "passed": true,
+      "observed": {
+        "http_status": 404,
+        "other_cart_items": 0
+      },
+      "trace": [
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/proposals",
+          "status": 200,
+          "request_id": "afadf132-7ad5-48a4-b675-fcc8063e32e3"
+        },
+        {
+          "session": "session-2",
+          "method": "POST",
+          "path": "/api/cart/confirm",
+          "status": 404,
+          "request_id": "54a78737-0ecf-4d5e-9b55-019468c24956",
+          "error_code": "PROPOSAL_NOT_FOUND"
+        },
+        {
+          "session": "session-2",
+          "method": "GET",
+          "path": "/api/cart",
+          "status": 200
+        }
+      ],
+      "duration_ms": 12
+    },
+    {
+      "id": "recheck",
+      "name": "Цена и остаток проверяются повторно",
+      "expected": "Любое изменение блокирует весь список; частичного добавления нет",
+      "passed": true,
+      "observed": {
+        "price_change": "PRICE_CHANGED",
+        "stock_change": "INSUFFICIENT_STOCK",
+        "partial_additions": 0
+      },
+      "trace": [
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/proposals",
+          "status": 200,
+          "request_id": "1c100e53-797c-4bc9-8b8d-661b475619af"
+        },
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/confirm",
+          "status": 409,
+          "request_id": "cf472fc9-6e25-4baa-9063-8c334781fc59",
+          "error_code": "PRICE_CHANGED"
+        },
+        {
+          "session": "session-1",
+          "method": "GET",
+          "path": "/api/cart",
+          "status": 200
+        },
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/cancel",
+          "status": 200,
+          "request_id": "d6c3a7c2-7592-40c0-b07f-86d43ab0c989"
+        },
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/proposals",
+          "status": 200,
+          "request_id": "a68d0398-07fa-4a19-a999-c04f59e74ba0"
+        },
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/cart/confirm",
+          "status": 409,
+          "request_id": "fbc65451-74f1-43f7-801f-03c42ef04b38",
+          "error_code": "INSUFFICIENT_STOCK"
+        },
+        {
+          "session": "session-1",
+          "method": "GET",
+          "path": "/api/cart",
+          "status": 200
+        }
+      ],
+      "duration_ms": 32
+    },
+    {
+      "id": "untrusted",
+      "name": "Инструкция внутри списка — не команда",
+      "expected": "Товар распознан, посторонняя строка не распознана; корзина пуста",
+      "passed": true,
+      "observed": {
+        "row_statuses": [
+          "ready",
+          "unparsed"
+        ],
+        "cart_items": 0,
+        "limitation": "Проверяется строгий парсер, не устойчивость языковой модели: AI не подключён."
+      },
+      "trace": [
+        {
+          "session": "session-1",
+          "method": "POST",
+          "path": "/api/audit",
+          "status": 200,
+          "request_id": "20f49845-8d15-4094-9340-2a7bf2f70d4a"
+        },
+        {
+          "session": "session-1",
+          "method": "GET",
+          "path": "/api/cart",
+          "status": 200
+        }
+      ],
+      "duration_ms": 14
+    }
+  ],
+  "limitations": [
+    "Только локальные вымышленные данные, не API ekt.kz.",
+    "Эти проверки не доказывают безопасность LLM или многопроцессного сервера."
+  ],
+  "finished_at": "2026-09-23T10:09:00.246Z",
+  "summary": {
+    "total": 12,
+    "passed": 12,
+    "failed": 0
+  }
+}

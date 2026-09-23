@@ -1,0 +1,16 @@
+{
+  "name": "ekt-revisor-demo",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Ревизор закупки: источники, сравнение кандидатов и проверяемая корзина. Учебный прототип.",
+  "type": "module",
+  "scripts": {
+    "start": "node server-demo.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check public/app.js && node --check public/api.js && node --check public/evidence.js && node --check public/revisor.js && node --check lib/revisor.mjs && node --check server-demo.mjs && node --check checks/run-checks.mjs",
+    "demo:checks": "node checks/run-checks.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

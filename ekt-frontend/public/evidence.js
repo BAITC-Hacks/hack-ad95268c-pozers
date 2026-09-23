@@ -1,0 +1,16 @@
+import { safeLink } from './api.js';
+export const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+/** Provenance is supplied by the backend, not invented by the UI or model. */
+export function evidenceHTML(value) {
+  if (!value?.source || !value.fetched_at) return `<details class="evidence evidence-missing"><summary><span class="evidence-dot"></span>Источник не предоставлен / данные не запрашивались<span class="evidence-expand">Раскрыть</span></summary><p>У этого сообщения нет подтверждённого источника и времени получения. Не считайте его доказательством цены или наличия.</p><dl><dt>data_mode</dt><dd>unknown</dd><dt>fetched_at</dt><dd>не предоставлено</dd></dl></details>`;
+  const label = { demo: 'Учебные данные', live: 'Данные сервера', cached: 'Сохранённая копия', unknown: 'Источник не подтверждён' }[value.data_mode] || 'Режим не указан';
+  const link = value.source.url && safeLink(value.source.url);
+  const time = Number.isFinite(Date.parse(value.fetched_at)) ? new Date(value.fetched_at).toLocaleString('ru-RU') : 'Некорректное время';
+  return `<details class="evidence"><summary><span class="evidence-dot"></span>${escapeHTML(label)} · источник и ограничения<span class="evidence-expand">Раскрыть</span></summary><dl><dt>Источник</dt><dd>${link ? `<a href="${escapeHTML(link)}" target="_blank" rel="noopener noreferrer">${escapeHTML(value.source.label)} ↗</a>` : escapeHTML(value.source.label)}</dd><dt>source.id</dt><dd><code>${escapeHTML(value.source.id)}</code></dd><dt>fetched_at</dt><dd>${escapeHTML(time)}<br><code>${escapeHTML(value.fetched_at)}</code></dd><dt>data_mode</dt><dd><code>${escapeHTML(value.data_mode)}</code></dd>${value.fields?.length ? `<dt>Что проверено</dt><dd>${escapeHTML(value.fields.join(', '))}</dd>` : ''}</dl>${(value.limitations || []).map(note => `<p>${escapeHTML(note)}</p>`).join('')}<p>Метка показывает происхождение данных, а не процент уверенности и не гарантию их правильности.</p></details>`;
+}
+export function comparisonHTML(value) {
+  if (!value || !Array.isArray(value.parameters)) return '';
+  const status = value.status === 'incompatible' ? 'Не подтверждённая замена: есть различия' : 'Требуется проверка совместимости';
+  const verdicts = { match: ['match', 'Совпадает'], different: ['different', 'Отличается'], unknown: ['unknown', 'Нет данных'] };
+  return `<section class="comparison"><div class="comparison-title"><strong>${escapeHTML(value.original_sku)} → ${escapeHTML(value.candidate_sku)}</strong><span class="status-pill ${value.status === 'incompatible' ? 'red' : 'amber'}">${status}</span></div><div class="table-scroll" tabindex="0" role="region" aria-label="Параметры аналогов"><table><thead><tr><th>Параметр</th><th>Исходный</th><th>Кандидат</th><th>Результат</th></tr></thead><tbody>${value.parameters.map(p => { const [css, label] = verdicts[p.verdict] || verdicts.unknown; return `<tr><th scope="row">${escapeHTML(p.label)}</th><td>${escapeHTML(p.original ?? 'Неизвестно')}</td><td>${escapeHTML(p.candidate ?? 'Неизвестно')}</td><td><span class="verdict ${css}">${label}</span></td></tr>`; }).join('')}</tbody></table></div><p class="comparison-note">${escapeHTML(value.explanation)}</p>${evidenceHTML(value.provenance)}</section>`;
+}

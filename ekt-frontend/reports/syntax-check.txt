@@ -1,0 +1,4 @@
+
+> ekt-revisor-demo@2.0.0 check
+> node --check public/app.js && node --check public/api.js && node --check public/evidence.js && node --check public/revisor.js && node --check lib/revisor.mjs && node --check server-demo.mjs && node --check checks/run-checks.mjs
+
