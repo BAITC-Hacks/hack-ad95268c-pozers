@@ -5,7 +5,7 @@
   "description": "Minimal Express backend for the Pozers hackathon project",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "dev": "node --watch --watch-path=src --watch-path=.env src/server.js"
   },
   "engines": {
     "node": ">=22"
