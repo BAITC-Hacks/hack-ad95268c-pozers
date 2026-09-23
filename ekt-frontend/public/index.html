@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f6f7f9">
+  <title>EKT Ревизор · Проверяем закупку, а не угадываем</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">К содержимому</a>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Навигация">
+      <a class="brand" href="#chat" aria-label="EKT — открыть помощника">
+        <span class="brand-mark" aria-hidden="true">↯</span>
+        <span><strong>EKT<span class="brand-dot">.</span></strong><small>РЕВИЗОР ЗАКУПКИ</small></span>
+      </a>
+      <div class="sidebar-label">РАБОЧЕЕ ПРОСТРАНСТВО</div>
+      <nav class="navigation">
+        <a href="#audit" class="nav-link" id="nav-audit"><span data-icon="search"></span>Проверить список</a>
+        <a href="#chat" class="nav-link active" id="nav-chat" aria-current="page"><span data-icon="chat"></span>Ассистент<span class="nav-active-dot"></span></a>
+        <a href="#cart" class="nav-link" id="nav-cart"><span data-icon="bag"></span>Корзина<span class="count" data-cart-count>0</span></a>
+        <a href="#checks" class="nav-link" id="nav-checks"><span data-icon="shield"></span>Проверки защиты</a>
+      </nav>
+      <div class="sidebar-note">
+        <span class="note-icon" data-icon="shield"></span>
+        <strong>Решение за вами</strong>
+        <p>Сначала проверьте товар и количество. В корзину — только после подтверждения.</p>
+      </div>
+      <div class="sidebar-bottom">
+        <span class="project-tag">HACKALEM AI</span>
+        <p>Прототип команды<br><span>Не официальный сайт магазина</span></p>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <div class="breadcrumb"><span class="mobile-logo">EKT.</span><span class="desktop-label">Помощник</span><span class="breadcrumb-separator">/</span><span id="page-crumb">Подбор оборудования</span></div>
+        <div class="topbar-actions"><span class="mode-badge" id="mode-badge">Подключаемся…</span><a class="mobile-cart" href="#cart" aria-label="Открыть корзину"><span data-icon="bag"></span><span data-cart-count>0</span></a></div>
+      </header>
+      <main id="main" tabindex="-1">
+        <nav class="mobile-tabs" aria-label="Разделы"><a href="#audit">Список</a><a href="#chat">Чат</a><a href="#cart">Корзина</a><a href="#checks">Проверки</a></nav>
+        <div class="connection-error" id="connection-error" role="alert" hidden></div>
+        <section id="audit-page" aria-labelledby="audit-title" hidden>
+          <div class="page-heading audit-heading"><div class="eyebrow"><span></span>НЕ ПРОСТО ЧАТ · РЕВИЗОР ЗАКУПКИ</div><h1 id="audit-title">Соберём закупку.<br><span class="muted-heading">Без скрытых решений.</span></h1><p>Что доступно, чего не хватает и что нужно уточнить — в одном проверяемом списке.</p></div>
+          <div class="audit-layout"><div class="audit-editor"><div class="section-caption"><span class="step-number">01</span><div><h2>Вставьте список</h2><p>Артикул ; количество. До 10 строк. Фото и файлы пока не поддержаны.</p></div></div><form id="audit-form"><label for="audit-input">Список закупки</label><textarea id="audit-input" rows="5" maxlength="6000" spellcheck="false" placeholder="DEMO-001 ; 10 шт." disabled></textarea><div class="editor-actions"><button type="button" class="text-button" id="load-example">Учебный пример</button><button type="button" class="text-button" id="load-injection">Пример с посторонней командой</button></div><button type="submit" class="primary-button" id="audit-submit" disabled>Проверить список ↗</button></form><p id="audit-status" class="operation-status" role="status" aria-live="polite">Проверка не добавляет товары в корзину.</p><div id="audit-error" class="inline-error" role="alert" hidden></div></div><aside class="trust-panel"><span class="status-pill amber">ДЕМО · НЕ ДАННЫЕ МАГАЗИНА</span><h2>Знаем границы<br>своих ответов.</h2><p>В каждой строке можно раскрыть источник, время чтения и ограничения.</p><div class="trust-rule"><span>01</span><div><strong>Нет данных ≠ нет товара</strong><p>Неизвестный остаток показываем отдельно.</p></div></div><div class="trust-rule"><span>02</span><div><strong>Замена не происходит сама</strong><p>Сначала параметры и ваш выбор.</p></div></div><div class="trust-rule"><span>03</span><div><strong>Подтверждение — на сервере</strong><p>Ответ не получен? Успех не обещаем.</p></div></div><a href="#checks" class="text-link">Посмотреть проверки защиты ↗</a></aside></div>
+          <div id="audit-results" aria-live="polite"></div>
+        </section>
+        <section id="checks-page" aria-labelledby="checks-title" hidden>
+          <div class="page-heading"><div class="eyebrow"><span></span>ДОКАЗАТЕЛЬСТВО, А НЕ ОБЕЩАНИЕ</div><h1 id="checks-title">Проверки защиты</h1><p>Реальный запуск проверок. Отдельные сессии и вымышленные товары. Корзина покупателя не затрагивается.</p></div>
+          <div class="checks-intro"><div><span class="status-pill amber">ТОЛЬКО ЛОКАЛЬНЫЙ ДЕМОСЕРВЕР</span><h2>Не просим поверить на слово.</h2><p>Каждая галочка появляется после выполнения HTTP-запросов и проверки результата. Раскройте строку, чтобы увидеть ожидаемый результат и трассу.</p></div><div class="check-buttons"><button type="button" class="primary-button" data-suite="core" disabled>Запустить 12 проверок</button><button type="button" class="secondary-button" data-suite="repeat" disabled>Подтвердить ×5</button><button type="button" class="secondary-button" data-suite="refusal" disabled>Показать отказ</button></div></div>
+          <p id="checks-availability" class="checks-limitation">Стенд недоступен, пока сервер не подтвердит учебный режим и разрешение на диагностику.</p><p id="check-status" class="operation-status" role="status" aria-live="polite">Проверки ещё не запускались. Результатов нет.</p><div id="check-error" class="inline-error" role="alert" hidden></div><div id="check-results" aria-live="polite"></div>
+        </section>
+        <section id="chat-page" class="chat-page" aria-labelledby="chat-title">
+          <div class="page-heading">
+            <div class="eyebrow"><span></span>КОНСУЛЬТАНТ ПО ЭЛЕКТРОТЕХНИКЕ</div>
+            <h1 id="chat-title">Что подберём сегодня?</h1>
+            <p>Найдите нужный товар. Сравните варианты. Подтвердите выбор.</p>
+          </div>
+          <div class="chat-layout">
+            <div class="chat-card">
+              <div class="chat-card-heading"><div class="assistant-avatar" aria-hidden="true">↯</div><div><strong>EKT Ревизор</strong><span id="assistant-subtitle">Подключение к серверу</span></div><span class="session-label">ВАШ ДИАЛОГ</span></div>
+              <div id="messages" class="messages" role="log" aria-label="Переписка с ассистентом" aria-live="polite" aria-relevant="additions text"></div>
+              <div id="proposal-area" class="proposal-area" aria-live="polite"></div>
+              <div id="chat-error" class="inline-error" role="alert" hidden></div>
+              <form id="chat-form" class="composer" novalidate>
+                <label class="sr-only" for="message-input">Ваш запрос</label>
+                <div class="input-wrap"><textarea id="message-input" name="message" rows="1" maxlength="2000" placeholder="Например, нужен автомат C16 на 1 полюс" disabled></textarea><button id="send-button" type="submit" class="send-button" aria-label="Отправить сообщение" disabled><span data-icon="arrow-up"></span></button></div>
+                <div class="composer-caption"><span id="composer-caption"><span data-icon="lock"></span>Добавление только с вашего подтверждения</span><span class="enter-hint">Enter ↵</span></div>
+              </form>
+            </div>
+            <aside class="guide" aria-label="Как работает помощник">
+              <div class="guide-heading"><span class="tiny-symbol">↗</span><h2>От запроса<br>к вашему выбору</h2></div>
+              <ol class="steps"><li><span>01</span><div><strong>Опишите задачу</strong><p>Название, артикул или нужные характеристики.</p></div></li><li><span>02</span><div><strong>Проверьте детали</strong><p>Цена, наличие и количество — в карточке товара.</p></div></li><li><span>03</span><div><strong>Подтвердите выбор</strong><p>Корзина изменится только после ответа сервера.</p></div></li></ol>
+              <div class="demo-note" id="demo-note"><span data-icon="info"></span><div><strong>Учебный режим</strong><p>Товары, цены и остатки вымышлены. Заказы не оформляются.</p></div></div>
+              <details class="demo-checks" id="demo-checks"><summary>Проверить состояния</summary><button class="text-button" type="button" data-query="несуществующий товар">Пустой результат ↗</button><button class="text-button" type="button" data-query="тест ошибка">Ошибка сервера ↗</button><button class="text-button" type="button" data-query="DEMO-004">Товар без остатка ↗</button></details>
+            </aside>
+          </div>
+        </section>
+        <section id="cart-page" class="cart-page" aria-labelledby="cart-title" hidden>
+          <div class="page-heading"><div class="eyebrow"><span></span>ВАШ ВЫБОР</div><h1 id="cart-title" tabindex="-1">Корзина</h1><p>Только позиции, добавление которых подтвердил сервер.</p></div>
+          <div id="cart-content" aria-live="polite"></div>
+        </section>
+      </main>
+      <footer class="page-footer"><span>EKT · Учебный прототип</span><span>Источник виден. Решение — за вами.</span></footer>
+    </div>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

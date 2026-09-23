@@ -1,0 +1,114 @@
+{
+  "transport": "in-memory browser modules + loopback HTTP bridge; not deployed E2E",
+  "tested_at": "2026-09-23T10:07:19Z",
+  "checks": [
+    {
+      "name": "initial screen has no fabricated test passes",
+      "passed": true
+    },
+    {
+      "name": "audit shows four rows and one ready item",
+      "passed": true
+    },
+    {
+      "name": "source, fetched_at and demo mode visible",
+      "passed": true
+    },
+    {
+      "name": "analogue comparison visibly exposes C/B and missing dimensions",
+      "passed": true
+    },
+    {
+      "name": "incompatible candidate has no selection button",
+      "passed": true
+    },
+    {
+      "name": "replacement is explicitly selected and marked unconfirmed",
+      "passed": true
+    },
+    {
+      "name": "edited input invalidates prior choices",
+      "passed": true
+    },
+    {
+      "name": "batch proposal lists exact two items without premature success",
+      "passed": true
+    },
+    {
+      "name": "negative confirmation leaves cart empty",
+      "passed": true
+    },
+    {
+      "name": "explicit typed confirmation waits for server and adds both lines",
+      "passed": true
+    },
+    {
+      "name": "cart displays two items and server total",
+      "passed": true
+    },
+    {
+      "name": "live UI displays actual twelve-test report",
+      "passed": true
+    },
+    {
+      "name": "test execution did not change customer cart",
+      "passed": true
+    },
+    {
+      "name": "five-request proof displays one write",
+      "passed": true
+    },
+    {
+      "name": "refusal proof exposes HTTP 409",
+      "passed": true
+    },
+    {
+      "name": "successful cart mutation invalidates previous audit",
+      "passed": true
+    },
+    {
+      "name": "no page overflow at 390px: audit",
+      "passed": true
+    },
+    {
+      "name": "no page overflow at 390px: chat",
+      "passed": true
+    },
+    {
+      "name": "no page overflow at 390px: cart",
+      "passed": true
+    },
+    {
+      "name": "no page overflow at 390px: checks",
+      "passed": true
+    },
+    {
+      "name": "no page overflow at 320px: audit",
+      "passed": true
+    },
+    {
+      "name": "no page overflow at 320px: chat",
+      "passed": true
+    },
+    {
+      "name": "no page overflow at 320px: cart",
+      "passed": true
+    },
+    {
+      "name": "no page overflow at 320px: checks",
+      "passed": true
+    },
+    {
+      "name": "no uncaught JavaScript errors",
+      "passed": true
+    }
+  ],
+  "summary": {
+    "total": 25,
+    "passed": 25
+  },
+  "limitations": [
+    "Browser navigation to URLs is unavailable in this environment. Cookies/CSP/CORS/HTTPS and actual link navigation were not exercised by the component browser harness.",
+    "Real direct HTTP state/CSRF/Origin checks are in npm test."
+  ]
+}
