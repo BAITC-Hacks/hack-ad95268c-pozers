@@ -14,6 +14,12 @@
   let opener = null;
   let notificationTimer;
   let revisor;
+  let storefront;
+  let failedMessage = null;
+  let removal = null;
+  let removalBusy = false;
+  const removeDialog = byId('remove-dialog');
+  const confirmedQuantity = id => cart.snapshot().items.find(item => String(item.product.id) === String(id))?.quantity || 0;
   const batchDialog = byId('batch-dialog');
   let batchPreparation = null;
   let batchPreparing = false;
@@ -36,6 +42,8 @@
   }
   function notify(text) {
     clearTimeout(notificationTimer);
+    const host = [dialog, batchDialog, removeDialog, byId('assistant-drawer'), byId('cart-drawer')].find(panel => panel?.open) || document.body;
+    host.append(byId('notification'));
     byId("notification").textContent = text;
     byId("notification").classList.add("visible");
     notificationTimer = setTimeout(() => byId("notification").classList.remove("visible"), 4500);
@@ -55,15 +63,30 @@
     const info = element("div", "product-info");
     info.append(element("p", "product-sku", product.sku ? `Арт. ${product.sku}` : "Артикул не указан"), element("h3", "", product.name));
     const price = element("div", "product-price", money(product.price));
-    price.append(element("span", "price-unit", " · цена по каталогу"));
+    price.append(element("span", "price-unit", product.unit ? `/ ${product.unit}` : " · единица не указана"));
     const stock = element("p", "stock");
     stock.dataset.stockId = product.id;
     const button = element("button", "add-button", "+ Добавить в корзину");
     button.type = "button";
     button.dataset.productId = product.id;
     button.setAttribute("aria-label", `Добавить в корзину: ${product.name}`);
-    button.addEventListener("click", () => openConfirmation(product.id, button));
-    info.append(price, stock, button);
+    button.addEventListener("click", () => {
+      const selection = storefront.intent(product.id);
+      if (!selection.ok) return notify(selection.error);
+      if (selection.quantity === 0) openRemoval(product.id, button);
+      else openConfirmation(product.id, button, selection.quantity);
+    });
+    if (Array.isArray(product.features)) {
+      const features = element('ul', 'product-features');
+      product.features.slice(0, 3).filter(value => typeof value === 'string').forEach(value => features.append(element('li', '', value)));
+      info.append(features);
+    }
+    info.append(price, stock, storefront.quantityControls(product), button);
+    if (typeof product.certificateUrl === 'string' && /^https?:\/\//i.test(product.certificateUrl)) {
+      const certificate = element('a', 'certificate-link', 'Сертификат');
+      certificate.href = product.certificateUrl; certificate.target = '_blank'; certificate.rel = 'noopener noreferrer';
+      info.append(certificate);
+    }
     if (product.url) {
       const link = element("a", "certificate-link", "Открыть товар на ekt.kz");
       link.href = product.url;
@@ -77,6 +100,7 @@
   }
   function appendMessage(role, text, products = [], scroll = true) {
     cart.register(products);
+    storefront.remember(products);
     const message = element("div", `message message-${role}`);
     const meta = element("div", "message-meta");
     meta.append(element("strong", "", role === "user" ? "Вы" : "EKT-помощник"));
@@ -94,11 +118,7 @@
     if (scroll) message.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
   function refreshProductAvailability() {
-    document.querySelectorAll("[data-product-id]").forEach(button => {
-      const available = cart.available(button.dataset.productId);
-      button.disabled = false;
-      button.textContent = available === 0 ? "Проверить остаток" : "+ Добавить в корзину";
-    });
+    storefront?.updateControls();
     document.querySelectorAll("[data-stock-id]").forEach(node => {
       const product = cart.getProduct(node.dataset.stockId);
       const available = cart.available(product.id);
@@ -116,35 +136,36 @@
       const empty = element("div", "cart-empty");
       const illustration = element("div", "empty-illustration");
       illustration.append(icon("icon-bag"));
-      empty.append(illustration, element("strong", "", "Здесь пока пусто"), element("p", "", "Выберите товар в чате.\nПосле подтверждения он появится здесь."));
+      empty.append(illustration, element("strong", "", "Здесь пока пусто"), element("p", "", "Выберите товар в каталоге. После подтверждения он появится здесь."));
+      const browse = element('a', '', 'Перейти к каталогу'); browse.href = '#catalog-section';
+      browse.addEventListener('click', () => storefront.closePanel('cart'));
+      empty.append(browse);
       container.append(empty);
     }
     snapshot.items.forEach(({ product, quantity, subtotal }) => {
       const item = element("article", "cart-item");
       item.append(element("h3", "", product.name), element("div", "muted", product.sku || "Артикул не указан"));
       const bottom = element("div", "cart-item-bottom");
-      bottom.append(element("span", "", `${quantity} × ${money(product.price)}`), element("strong", "", money(subtotal)));
+      bottom.append(element("span", "", `${quantity}${product.unit ? ` ${product.unit}` : " (ед. не указана)"} × ${money(product.price)}`), element("strong", "", money(subtotal)));
       const remove = element("button", "remove-item", "Удалить");
       remove.type = "button";
       remove.setAttribute("aria-label", `Удалить из корзины: ${product.name}`);
-      remove.addEventListener("click", async () => {
-        remove.disabled = true;
-        try {
-          await cart.remove(product.id);
-          revisor?.invalidateAudit();
-          renderCart();
-          byId("cart-panel").focus({ preventScroll: true });
-          notify("Товар удалён из серверной корзины.");
-        } catch (error) { notify(error.message); remove.disabled = false; }
-      });
+      remove.addEventListener("click", () => openRemoval(product.id, remove));
       item.append(bottom, remove);
       container.append(item);
     });
+    storefront?.sync();
     refreshProductAvailability();
   }
   function updateQuantity() {
     if (!confirmation || confirmationBusy) return;
-    const result = cart.setQuantity(confirmation.token, quantityInput.value);
+    const desired = Number(quantityInput.value);
+    const delta = desired - confirmation.baseQuantity;
+    const valid = /^[1-9]\d*$/.test(quantityInput.value) && Number.isSafeInteger(desired) && delta > 0;
+    const result = cart.setQuantity(confirmation.token, valid ? String(delta) : '');
+    byId('confirm-description').textContent = result.ok
+      ? `Уже в корзине: ${confirmation.baseQuantity}. Добавим: ${delta}. Итого будет: ${desired}.`
+      : 'Укажите итоговое количество больше уже добавленного. Для удаления выберите 0 на карточке.';
     byId("quantity-error").textContent = result.ok ? "" : result.error;
     quantityInput.setAttribute("aria-invalid", String(!result.ok));
     byId("confirm-button").disabled = !result.ok;
@@ -153,8 +174,8 @@
     byId("increase-quantity").disabled = result.ok && result.quantity >= cart.available(confirmation.product.id);
   }
   let preparing = false;
-  async function openConfirmation(id, source) {
-    if (dialog.open || preparing || batchDialog.open || batchPreparing) return;
+  async function openConfirmation(id, source, desiredTotal) {
+    if (dialog.open || preparing || batchDialog.open || batchPreparing || removeDialog.open || removalBusy) return;
     preparing = true;
     source.disabled = true;
     source.textContent = "Проверяем остаток…";
@@ -162,14 +183,20 @@
       const result = await cart.prepare(id);
       renderCart();
       if (!result.ok) return notify(result.error);
-      confirmation = result;
+      const baseQuantity = confirmedQuantity(id);
+      if (desiredTotal <= baseQuantity) {
+        await cart.cancel(result.token);
+        return notify('Количество в корзине изменилось. Проверьте его и выберите нужный итог заново.');
+      }
+      confirmation = { ...result, baseQuantity };
       opener = source;
       byId("confirm-product-name").textContent = result.product.name;
       byId("confirm-product-sku").textContent = result.product.sku ? `Арт. ${result.product.sku}` : "Артикул не указан";
       byId("confirm-unit-price").textContent = money(result.product.price);
-      byId("available-stock").textContent = `Доступно: ${result.available}`;
-      quantityInput.value = "1";
-      quantityInput.max = result.available;
+      byId("available-stock").textContent = `Уже в корзине: ${baseQuantity} · Можно добавить: ${result.available}`;
+      quantityInput.min = baseQuantity + 1;
+      quantityInput.value = String(desiredTotal);
+      quantityInput.max = baseQuantity + result.available;
       updateQuantity();
       dialog.showModal();
       quantityInput.focus();
@@ -192,8 +219,12 @@
     dialog.close();
     lockConfirmation(false);
     renderCart();
-    if (opener && !opener.disabled) opener.focus({ preventScroll: true });
-    else byId("cart-panel").focus({ preventScroll: true });
+    const selectionInput = opener?.closest('.product-card')?.querySelector('input');
+    if (opener?.isConnected && !opener.disabled) opener.focus({ preventScroll: true });
+    else if (selectionInput?.isConnected && !selectionInput.disabled) selectionInput.focus({ preventScroll: true });
+    else if (byId('assistant-drawer').open) input.focus({ preventScroll: true });
+    else if (byId('cart-drawer').open) byId('cart-panel').focus({ preventScroll: true });
+    else byId('catalog-heading').focus({ preventScroll: true });
   }
   byId("confirm-form").addEventListener("submit", async event => {
     event.preventDefault();
@@ -219,23 +250,57 @@
     if (!confirmation || confirmationBusy) return;
     const value = Number(quantityInput.value);
     const base = Number.isSafeInteger(value) ? value : 1;
-    quantityInput.value = Math.max(1, Math.min(cart.available(confirmation.product.id), base + (index ? 1 : -1)));
+    quantityInput.value = Math.max(confirmation.baseQuantity + 1, Math.min(confirmation.baseQuantity + cart.available(confirmation.product.id), base + (index ? 1 : -1)));
     updateQuantity();
   }));
   byId("cancel-confirmation").addEventListener("click", closeConfirmation);
   byId("close-dialog").addEventListener("click", closeConfirmation);
   dialog.addEventListener("cancel", event => { event.preventDefault(); closeConfirmation(); });
 
+  function openRemoval(id, source) {
+    if (preparing || dialog.open || batchPreparing || batchDialog.open || removeDialog.open || removalBusy) return;
+    const product = cart.getProduct(id);
+    if (!product || confirmedQuantity(id) === 0) return;
+    removal = { id, source };
+    byId('remove-description').textContent = `${product.name}. Будет удалена вся позиция (${confirmedQuantity(id)}). До подтверждения корзина не изменится.`;
+    byId('remove-error').textContent = '';
+    removeDialog.showModal(); storefront.updateControls();
+  }
+  function closeRemoval() {
+    if (removalBusy) return;
+    const source = removal?.source;
+    removal = null; removeDialog.close(); storefront.sync();
+    if (source?.isConnected && !source.disabled) source.focus({ preventScroll: true });
+    else if (byId('cart-drawer').open) byId('cart-panel').focus({ preventScroll: true });
+    else byId('catalog-heading').focus({ preventScroll: true });
+  }
+  byId('remove-cancel').addEventListener('click', closeRemoval);
+  removeDialog.addEventListener('cancel', event => { event.preventDefault(); closeRemoval(); });
+  byId('remove-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!removal || removalBusy) return;
+    removalBusy = true; byId('remove-confirm').disabled = true; byId('remove-cancel').disabled = true;
+    byId('remove-error').textContent = 'Удаляем товар…';
+    try {
+      await cart.remove(removal.id);
+      revisor?.invalidateAudit(); renderCart();
+      removalBusy = false; closeRemoval();
+      notify('Товар удалён из серверной корзины.');
+    } catch (error) { byId('remove-error').textContent = error.message; }
+    finally { removalBusy = false; byId('remove-confirm').disabled = false; byId('remove-cancel').disabled = false; storefront.updateControls(); }
+  });
+
   function updateSendButton() {
     byId("send-button").disabled = sending || !input.value.trim();
     revisor?.update();
   }
-  async function sendMessage() {
-    const text = input.value.trim();
+  async function sendMessage(retryText) {
+    const text = typeof retryText === "string" ? retryText : input.value.trim();
     if (!text || sending) return;
     sending = true;
     byId("connection-status").textContent = "Ищем в каталоге…";
-    input.value = "";
+    if (typeof retryText !== "string") input.value = "";
+    byId("retry-message").hidden = true;
     input.style.height = "42px";
     updateSendButton();
     appendMessage("user", text);
@@ -244,9 +309,12 @@
       const reply = await service.getReply(text);
       appendMessage("assistant", reply.text, reply.products);
       byId("connection-status").textContent = "Ответ получен от AI";
+      failedMessage = null;
     } catch (error) {
       appendMessage("assistant", error.message);
       byId("connection-status").textContent = "Ошибка запроса";
+      failedMessage = text;
+      byId("retry-message").hidden = false;
     } finally {
       sending = false;
       updateSendButton();
@@ -266,11 +334,10 @@
   });
   document.querySelectorAll("[data-prompt]").forEach(button => button.addEventListener("click", () => {
     if (sending) return;
-    input.value = button.dataset.prompt;
-    sendMessage();
+    storefront.prefill(button.dataset.prompt, button);
   }));
   async function prepareBatch(items, source) {
-    if (batchPreparing || batchDialog.open || dialog.open || preparing) return;
+    if (batchPreparing || batchDialog.open || dialog.open || preparing || removeDialog.open || removalBusy) return;
     batchPreparing = true;
     try {
       const proposal = await cart.prepareBatch(items);
@@ -332,15 +399,21 @@
       if (batchPreparation === proposal) byId('batch-confirm').disabled = false;
     }
   });
-  revisor = service.createRevisor({ prepareBatch, toast: notify, canPrepare: () => !sending && !preparing && !dialog.open && !batchPreparing && !batchDialog.open });
+  revisor = service.createRevisor({ prepareBatch, toast: notify, canPrepare: () => !sending && !preparing && !dialog.open && !batchPreparing && !batchDialog.open && !removeDialog.open && !removalBusy });
+  storefront = service.createStorefront({ cart, productCard, notify, isBusy: () => preparing || confirmationBusy || batchPreparing || batchConfirming || removalBusy || dialog.open || batchDialog.open || removeDialog.open });
+  byId('retry-message').addEventListener('click', () => { if (failedMessage) sendMessage(failedMessage); });
   function route() {
-    const view = location.hash === '#audit' ? 'audit' : location.hash === '#chat' || !location.hash ? 'chat' : null;
-    if (!view) return;
-    byId('chat-section').hidden = view !== 'chat';
-    byId('audit-panel').hidden = view !== 'audit';
-    document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.view === view)));
+    const audit = location.hash === '#audit';
+    byId('audit-panel').hidden = !audit;
+    byId('catalog-section').hidden = audit;
+    document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.view === (audit ? 'audit' : 'catalog'))));
+    if (location.hash === '#chat') storefront.openPanel('chat');
+    if (location.hash === '#cart-panel') storefront.openPanel('cart');
   }
-  document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => { location.hash = button.dataset.view; route(); }));
+  document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => {
+    if (button.dataset.view === 'chat') storefront.openPanel('chat', button);
+    else { location.hash = button.dataset.view; route(); }
+  }));
   window.addEventListener('hashchange', route); route();
   appendMessage("assistant", "Здравствуйте! Помогу найти товары ekt.kz. Укажите название, артикул или ID товара — например, «Есть Legrand 40A?».", [], false);
   renderCart();
@@ -348,6 +421,6 @@
     try { await cart.refresh(); renderCart(); }
     catch (error) { notify(error.message); }
   }
-  document.querySelector('.cart-shortcut').addEventListener('click', refreshCart);
+  document.querySelector('.cart-shortcut').addEventListener('click', event => { event.preventDefault(); storefront.openPanel('cart', event.currentTarget); refreshCart(); });
   refreshCart();
 })();

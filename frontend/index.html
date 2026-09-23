@@ -5,11 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#16704c">
   <meta name="color-scheme" content="light">
-  <title>EKT AI Assistant</title>
+  <title>EKT — электротехника для ваших задач</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="storefront.css">
   <script src="assistant-service.js" defer></script>
   <script src="cart.js" defer></script>
   <script src="revisor.js" defer></script>
+  <script src="storefront.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
@@ -53,35 +55,30 @@
   <header class="site-header">
     <div class="header-inner">
       <a href="./index.html" class="brand" aria-label="EKT — главная"><span class="brand-mark">ekt<span>·</span></span><span class="brand-divider"></span><span class="brand-caption">Электротехника.<br>Просто и понятно.</span></a>
+      <nav class="header-nav" aria-label="Главное меню"><a href="#catalog-section" data-catalog-link>Каталог</a><a href="#purchase-terms">Доставка и оплата</a></nav>
+      <form id="catalog-search-form" class="header-search" role="search">
+        <label class="sr-only" for="catalog-search">Поиск по названию или артикулу</label>
+        <div class="search-field"><span aria-hidden="true">⌕</span><input id="catalog-search" type="search" placeholder="Название или артикул" autocomplete="off" aria-describedby="search-scope"><button id="clear-search" type="button" aria-label="Очистить поиск" disabled>×</button></div>
+        <small id="search-scope">Поиск среди загруженных товаров</small>
+      </form>
       <a class="cart-shortcut" href="#cart-panel"><svg class="icon" aria-hidden="true"><use href="#icon-bag"></use></svg><span>Корзина</span><span class="count-badge" id="header-cart-count">0</span></a>
     </div>
   </header>
 
   <main class="page-shell">
-    <div class="intro-row">
-      <div><div class="eyebrow"><span class="status-dot"></span> ПОМОЩНИК ПО ПОДБОРУ ТОВАРОВ</div><h1>EKT <span>AI Assistant</span></h1><p class="intro-description">От вопроса к нужному товару — в одном диалоге.</p></div>
-      <div class="demo-notice"><span class="demo-pill">EKT.KZ</span><span id="connection-status" role="status">Готов к запросу</span></div>
+    <section class="store-hero" aria-labelledby="store-heading">
+      <div><div class="eyebrow">КАТАЛОГ ЭЛЕКТРОТОВАРОВ EKT</div><h1 id="store-heading">Электротехника<br>для ваших задач</h1><p>Поиск по каталогу и помощь с выбором — в одном месте.</p><div class="hero-actions"><a href="#catalog-section" data-catalog-link>Перейти к каталогу ↓</a><button type="button" data-open-panel="chat">Помочь с выбором ↗</button></div></div>
+      <div class="hero-art" aria-hidden="true"><svg viewBox="0 0 50 70"><path d="M29 3 7 39h17l-3 28 24-40H28l1-24Z"/></svg></div>
+    </section>
+    <div class="catalog-top"><div><h2 id="catalog-heading" tabindex="-1">Подберите нужное</h2><p>Товары из ваших запросов и текущей корзины</p></div>
+      <nav class="workspace-tabs" aria-label="Разделы магазина"><button type="button" data-view="catalog" aria-controls="catalog-section" aria-pressed="true">Каталог</button><button type="button" data-view="audit" aria-controls="audit-panel" aria-pressed="false">Ревизор закупки</button><button type="button" data-view="chat" aria-controls="chat-section" aria-pressed="false">AI-помощник ↗</button></nav>
     </div>
-
-    <nav class="workspace-tabs" aria-label="Разделы помощника">
-      <button type="button" data-view="chat" aria-controls="chat-section" aria-pressed="true">AI-чат</button>
-      <button type="button" data-view="audit" aria-controls="audit-panel" aria-pressed="false">Ревизор закупки</button>
-    </nav>
     <div class="workspace">
-      <section class="chat-panel" id="chat-section" aria-labelledby="chat-heading">
-        <div class="panel-heading"><div class="heading-group"><span class="assistant-avatar"><svg class="icon" aria-hidden="true"><use href="#icon-spark"></use></svg></span><div><h2 id="chat-heading">Ваш EKT-помощник</h2><p>Поиск по каталогу ekt.kz</p></div></div><span class="session-label"><span class="status-dot"></span> Помощник</span></div>
-        <div class="conversation" id="conversation" role="log" aria-label="Сообщения чата" aria-live="polite" aria-relevant="additions"></div>
-        <div class="composer-area">
-          <div class="suggestions" aria-label="Примеры запросов"><button type="button" data-prompt="Есть Legrand 40A?">Legrand 40A <span>↗</span></button><button type="button" data-prompt="Какие характеристики у товара 515279?">Характеристики товара <span>↗</span></button><button type="button" data-prompt="Сколько осталось товара с артикулом 310100080_?">Остаток по артикулу <span>↗</span></button></div>
-          <form id="message-form" class="message-form">
-            <label class="sr-only" for="message-input">Сообщение помощнику</label>
-            <textarea id="message-input" rows="1" maxlength="2000" placeholder="Например, есть Legrand 40A?" aria-describedby="input-hint" required></textarea>
-            <button type="submit" id="send-button" class="send-button" aria-label="Отправить сообщение" disabled><svg class="icon" aria-hidden="true"><use href="#icon-arrow"></use></svg></button>
-          </form>
-          <div class="composer-footer"><span id="input-hint">Enter — отправить · Shift + Enter — новая строка</span><span>Реальные данные ekt.kz</span></div>
-        </div>
+      <section id="catalog-section" aria-labelledby="catalog-heading">
+        <div class="catalog-toolbar"><label for="stock-filter">Наличие <select id="stock-filter"><option value="all">Все загруженные товары</option><option value="available">Есть в наличии</option><option value="unknown">Остаток не указан</option></select></label><span id="catalog-results" role="status">0 позиций</span></div>
+        <div id="catalog-grid" class="catalog-grid"></div>
+        <div id="catalog-empty" class="catalog-empty"><div class="empty-illustration"><svg class="icon" aria-hidden="true"><use href="#icon-bag"></use></svg></div><h3 id="catalog-empty-title">Начните с нужного товара</h3><p id="catalog-empty-text"></p><div class="empty-actions"><button type="button" class="primary-button" data-open-panel="chat">Найти товар с помощником</button><button type="button" id="reset-filters" class="secondary-button" hidden>Сбросить фильтры</button></div></div>
       </section>
-
       <section class="audit-panel" id="audit-panel" aria-labelledby="audit-heading" hidden>
         <div class="audit-section-heading"><span class="eyebrow">ПРОВЕРКА СПИСКА</span><h2 id="audit-heading">Ревизор закупки</h2><p>Проверим товары, цены и остатки по реальному каталогу ekt.kz.</p></div>
         <form id="audit-form" class="audit-editor">
@@ -99,32 +96,60 @@
           <textarea id="manager-text" class="manager-text" aria-label="Вопросы для уточнения" rows="4" readonly hidden></textarea>
         </div>
       </section>
-      <aside class="cart-panel" id="cart-panel" aria-labelledby="cart-heading" tabindex="-1">
-        <div class="cart-title"><h2 id="cart-heading"><svg class="icon" aria-hidden="true"><use href="#icon-bag"></use></svg> Корзина</h2><span class="count-badge" id="cart-count">0</span></div>
-        <p class="cart-subtitle">Товары из чата и ревизора</p>
-        <div id="cart-items"></div>
-        <div class="cart-total"><span>Итого</span><strong id="cart-total">0</strong></div>
-        <p class="cart-disclaimer"><svg class="icon" aria-hidden="true"><use href="#icon-check"></use></svg><span>Добавление только после вашего подтверждения. Корзина сохраняется в сессии и не изменяет корзину ekt.kz, не резервирует товары.</span></p>
-      </aside>
+
     </div>
+    <section id="purchase-terms" class="terms-section" aria-labelledby="terms-heading">
+      <div><h2 id="terms-heading">Доставка и оплата</h2><p>В проекте пока нет подтверждённых условий покупки. Помощник может помочь уточнить доступную информацию.</p><button type="button" class="text-action" data-prompt="Уточни подтверждённые условия доставки, оплаты и минимальную партию. Неизвестные условия обозначь явно.">Уточнить условия ↗</button></div>
+      <div><h3>Доставка</h3><p>Стоимость доставки пока не рассчитана. Сроки и доступные способы доставки не указаны.</p></div>
+      <div><h3>Оплата и партия</h3><p>Способы оплаты и минимальная партия не указаны. Корзина проекта не оформляет заказ и не резервирует товары на ekt.kz.</p></div>
+    </section>
     <footer class="page-footer"><span>EKT · Учебный прототип</span><span>Корзина сохраняется после обновления страницы в той же сессии</span></footer>
   </main>
 
+  <button type="button" class="assistant-launcher" data-open-panel="chat"><svg class="icon" aria-hidden="true"><use href="#icon-spark"></use></svg> AI-помощник</button>
+  <dialog id="assistant-drawer" class="side-drawer" aria-labelledby="chat-heading">
+      <section class="chat-panel" id="chat-section" aria-labelledby="chat-heading">
+        <div class="panel-heading"><div class="heading-group"><span class="assistant-avatar"><svg class="icon" aria-hidden="true"><use href="#icon-spark"></use></svg></span><div><h2 id="chat-heading">Ваш EKT-помощник</h2><p>Поиск по каталогу ekt.kz</p></div></div><button type="button" class="text-action" data-open-panel="cart">Корзина</button><button type="button" class="icon-button drawer-close" data-close-panel="chat" aria-label="Закрыть AI-помощника"><svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg></button></div>
+        <div class="conversation" id="conversation" role="log" aria-label="Сообщения чата" aria-live="polite" aria-relevant="additions"></div>
+        <div class="composer-area">
+          <div class="suggestions" aria-label="Быстрые действия"><button type="button" data-prompt="Помоги подобрать аналог. Уточни у меня артикул или название исходного товара.">Подобрать аналог</button><button type="button" data-prompt="Хочу проверить наличие. Уточни у меня артикул или название товара.">Проверить наличие</button><button type="button" data-prompt="Какие подтверждённые условия доставки, оплаты и минимальной партии доступны? Если данных нет, сообщи об этом.">Доставка и оплата</button></div>
+          <div class="chat-status"><span id="connection-status" role="status">Готов к запросу</span><button type="button" id="retry-message" class="secondary-button" hidden>Повторить запрос</button></div>
+          <form id="message-form" class="message-form">
+            <label class="sr-only" for="message-input">Сообщение помощнику</label>
+            <textarea id="message-input" rows="1" maxlength="2000" placeholder="Что вам нужно найти?" aria-describedby="input-hint" required></textarea>
+            <button type="submit" id="send-button" class="send-button" aria-label="Отправить сообщение" disabled><svg class="icon" aria-hidden="true"><use href="#icon-arrow"></use></svg></button>
+          </form>
+          <div class="composer-footer"><span id="input-hint">Enter — отправить · Shift + Enter — новая строка</span><span>Реальные данные ekt.kz</span></div>
+        </div>
+      </section>
+
+  </dialog>
+  <dialog id="cart-drawer" class="side-drawer cart-drawer" aria-labelledby="cart-heading">
+      <aside class="cart-panel" id="cart-panel" aria-labelledby="cart-heading" tabindex="-1">
+        <div class="cart-title"><h2 id="cart-heading"><svg class="icon" aria-hidden="true"><use href="#icon-bag"></use></svg> Корзина</h2><span class="count-badge" id="cart-count">0</span><button type="button" class="icon-button" data-close-panel="cart" aria-label="Закрыть корзину"><svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg></button></div>
+        <p class="cart-subtitle">Подтверждённые товары текущей сессии</p>
+        <div id="cart-items"></div>
+        <div class="cart-total"><span>Подытог товаров</span><strong id="cart-total">0</strong></div>
+        <p class="shipping-note">Стоимость доставки пока не рассчитана.</p>
+        <p class="cart-disclaimer"><svg class="icon" aria-hidden="true"><use href="#icon-check"></use></svg><span>Добавление только после вашего подтверждения. Корзина сохраняется в сессии и не изменяет корзину ekt.kz, не резервирует товары.</span></p>
+      </aside>
+  </dialog>
+  <dialog id="remove-dialog" aria-labelledby="remove-title" aria-describedby="remove-description"><form id="remove-form"><h2 id="remove-title">Удалить товар?</h2><p id="remove-description"></p><p id="remove-error" class="form-error" role="alert"></p><div class="dialog-actions"><button type="button" id="remove-cancel" class="secondary-button">Отмена</button><button type="submit" id="remove-confirm" class="primary-button">Да, удалить</button></div></form></dialog>
   <dialog id="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-description">
     <form id="confirm-form" novalidate>
       <div class="dialog-heading"><span class="dialog-icon"><svg class="icon" aria-hidden="true"><use href="#icon-bag"></use></svg></span><button type="button" class="icon-button" id="close-dialog" aria-label="Закрыть подтверждение"><svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg></button></div>
-      <p class="eyebrow">ЛОКАЛЬНАЯ КОРЗИНА</p><h2 id="confirm-title">Добавить товар?</h2><p id="confirm-description" class="muted">Проверьте количество и подтвердите добавление.</p>
+      <p class="eyebrow">КОРЗИНА</p><h2 id="confirm-title">Добавить товар?</h2><p id="confirm-description" class="muted">Проверьте количество и подтвердите добавление.</p>
       <div class="confirm-product"><strong id="confirm-product-name"></strong><span id="confirm-product-sku" class="muted"></span><span id="confirm-unit-price"></span></div>
-      <div class="quantity-row"><label for="quantity-input">Количество<span id="available-stock" class="muted"></span></label><div class="quantity-control"><button type="button" id="decrease-quantity" aria-label="Уменьшить количество">−</button><input id="quantity-input" type="number" inputmode="numeric" min="1" step="1" value="1" required aria-describedby="available-stock quantity-error"><button type="button" id="increase-quantity" aria-label="Увеличить количество">+</button></div></div>
+      <div class="quantity-row"><label for="quantity-input">Итого в корзине<span id="available-stock" class="muted"></span></label><div class="quantity-control"><button type="button" id="decrease-quantity" aria-label="Уменьшить количество">−</button><input id="quantity-input" type="number" inputmode="numeric" min="1" step="1" value="1" required aria-describedby="available-stock quantity-error"><button type="button" id="increase-quantity" aria-label="Увеличить количество">+</button></div></div>
       <p id="quantity-error" class="form-error" role="alert"></p>
-      <div class="confirm-total"><span>Сумма</span><strong id="confirm-total"></strong></div>
+      <div class="confirm-total"><span>Сумма добавления</span><strong id="confirm-total"></strong></div>
       <div class="dialog-actions"><button type="button" class="secondary-button" id="cancel-confirmation">Отмена</button><button type="submit" class="primary-button" id="confirm-button">Да, добавить</button></div>
       <p class="dialog-note">После подтверждения товар сохранится в вашей корзине на сервере проекта.</p>
     </form>
   </dialog>
   <dialog id="batch-dialog" aria-labelledby="batch-title">
     <form id="batch-form">
-      <p class="eyebrow">ЛОКАЛЬНАЯ КОРЗИНА</p><h2 id="batch-title">Добавить выбранные позиции?</h2>
+      <p class="eyebrow">КОРЗИНА</p><h2 id="batch-title">Добавить выбранные позиции?</h2>
       <p class="muted">Проверьте товары и количества. Сейчас корзина ещё не изменена.</p>
       <div id="batch-items"></div>
       <div class="confirm-total"><span>Сумма</span><strong id="batch-total"></strong></div>
